@@ -1,0 +1,30 @@
+# Request
+string command # move, calibrate, lock, unlock
+float32 speed
+string position
+
+# Emulate request outcomes
+
+# DONT_EMULATE_EXECUTION_TIME: The action will be executed immediatelly
+# EMULATE_EXACT_EXECUTION_TIME: The action will always take "emulate_execution_time" amount of time
+# EMULATE_RANDOM_EXECUTION_TIME: The action will randomly take between 0 and "emulated_execution_time" amount of time
+uint8 DONT_EMULATE_EXECUTION_TIME = 0
+uint8 EMULATE_EXACT_EXECUTION_TIME = 1
+uint8 EMULATE_RANDOM_EXECUTION_TIME = 2
+uint8 emulate_execution_time
+int32 emulated_execution_time # milliseconds
+
+# DONT_EMULATE_FAILURE: The action will be execute succesfully every time
+# EMULATE_FAILURE_ALWAYS: The action will always fail
+# EMULATE_RANDOM_FAILURE_RATE: The action will randomly fail with a "emulated_failure_rate" rate
+uint8 DONT_EMULATE_FAILURE = 0
+uint8 EMULATE_FAILURE_ALWAYS = 1
+uint8 EMULATE_RANDOM_FAILURE_RATE = 2
+uint8 emulate_failure_rate
+int32 emulated_failure_rate # percentage 0..100
+
+---
+# Response
+bool success
+string info
+
