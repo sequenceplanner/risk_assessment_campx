@@ -10,14 +10,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let node = r2r::Node::create(ctx, NODE_ID, "")?;
     let arc_node = Arc::new(Mutex::new(node));
 
-    let state = state();
-    let shared_state = Arc::new(Mutex::new(state.clone()));
-
     r2r::log_info!(NODE_ID, "Spawning tasks...");
 
     let arc_node_clone: Arc<Mutex<r2r::Node>> = arc_node.clone();
     tokio::task::spawn(async move {
-        spawn_gantry_ticker(
+        gantry_client_ticker::gantry_client_ticker(
             arc_node_clone,
         )
         .await
