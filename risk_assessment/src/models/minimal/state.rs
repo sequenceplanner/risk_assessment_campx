@@ -29,19 +29,19 @@ pub fn state() -> State {
     let gantry_position_command = v!("gantry_position_command");
 
     let state = state.add(assign!(gantry_command_command, SPValue::UNKNOWN));
-    let state = state.add(assign!(gantry_speed_command, 0.to_spvalue()));
+    let state = state.add(assign!(gantry_speed_command, 0.0.to_spvalue()));
     let state = state.add(assign!(gantry_position_command, SPValue::UNKNOWN));
 
     // In this emulation, we estimate (memory variables) the following, since we cannot directly measure
     let gantry_speed_measured = fv!("gantry_speed_estimated");
-    let gantry_position_measured = v!("gantry_position_estimated");
+    let gantry_position_estimated = v!("gantry_position_estimated");
     let gantry_calibrated_estimated = bv!("gantry_calibrated_estimated");
     let gantry_locked_estimated = bv!("gantry_locked_estimated");
 
     let state = state.add(assign!(gantry_calibrated_estimated, SPValue::UNKNOWN));
     let state = state.add(assign!(gantry_locked_estimated, SPValue::UNKNOWN));
     let state = state.add(assign!(gantry_speed_measured, SPValue::UNKNOWN));
-    let state = state.add(assign!(gantry_position_measured, SPValue::UNKNOWN));
+    let state = state.add(assign!(gantry_position_estimated, SPValue::UNKNOWN));
 
     state
 }

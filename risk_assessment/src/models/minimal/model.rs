@@ -1,6 +1,7 @@
 use micro_sp::*;
+// use crate::*;
 
-pub fn scheduler_model(state: &State, coverability_tracking: bool) -> (Model, State) {
+pub fn minimal_model(state: &State) -> (Model, State) {
     let state = state.clone();
     let mut operations = vec![];
     let auto_transitions = vec![];
@@ -191,7 +192,83 @@ pub fn scheduler_model(state: &State, coverability_tracking: bool) -> (Model, St
 
     let model = Model::new("minimal_model", auto_transitions, operations);
 
-    let state = generate_runner_state_variables(&model, &model.name, true);
+    let runner_state = generate_runner_state_variables(&model, &model.name, true);
 
-    (model, state)
+    (model, runner_state.extend(state, true))
 }
+
+#[test]
+    fn test_model() {
+        let state = crate::models::minimal::state::state();
+
+        for s in &state.state {
+            println!("{:?}", s.1);
+        }
+
+        let (model, state) = minimal_model(&state);
+
+        println!("+++++++++++++++++++++++");
+
+        for s in &state.state {
+            println!("{:?}", s.1);
+        }
+
+        let goal = state.get_value(&format!("{}_goal", model.name));
+        let val = state.get_value("gantry_position_estimated");
+        println!("Current goal: {:?}", goal);
+        println!("Current value: {:?}", val);
+
+        let state = state.update(&format!("{}_goal", model.name), "var:gantry_position_estimated == b".to_spvalue());
+        let goal = state.get_value(&format!("{}_goal", model.name));
+        let val = state.get_value("gantry_position_estimated");
+        println!("Current goal: {:?}", goal);
+        println!("Current value: {:?}", val);
+
+        // let extracted_goal = extract_goal_from_state(name, state)
+
+        let plan = bfs_operation_planner(
+            state.clone(),
+            extract_goal_from_state(model.name, &state.clone()),
+            model.operations.clone(),
+            30,
+        );
+
+        let val = state.get_value("gantry_position_estimated");
+        println!("Current goal: {:?}", goal);
+        println!("Current value: {:?}", val);
+
+        println!("{:?}", plan);
+
+        assert!(plan.found);
+    }
+
+// #[cfg(test)]
+// mod tests {
+
+//     use minimal::model::minimal_model;
+//     use micro_sp::*;
+//     use crate::*;
+
+//     #[test]
+//     fn test_model() {
+//         let state = models::minimal::state::state();
+
+//         let (model, state) = minimal_model(&state);
+
+//         let plan = bfs_operation_planner(
+//             state.clone(),
+//             extract_goal_from_state(model.name, &state.clone()),
+//             model.operations.clone(),
+//             30,
+//         );
+//         println!("ASDFASDFASDF");
+//         log::error!("asdf");
+//         for p in plan.plan {
+//             println!("{}", p);
+//             // println!("{}", p);
+//         }
+//         // log::info!("This is an info message.");
+
+//         assert!(plan.found);
+//     }
+// }

@@ -9,6 +9,7 @@ autotests = false
 inherits = "release"
 
 [dependencies]
+log = "0.4.21"
 rand = "0.8.5"
 # ordered-float = {version = "3.4.0", features = ["serde"] }
 # serde = {version = "1.0.152", features = ["derive"] }

@@ -66,9 +66,10 @@ async fn perform_test(
 
     let mut test_case = 0;
 
+    let shared_state_local = shared_state.lock().unwrap().clone();
     while test_case < NUMBER_OF_TEST_CASES {
-
-
+        let random_state = generate_random_initial_state(&shared_state_local);
+        let goal = 
 
         ticker_timer.tick().await?;
     }
@@ -102,6 +103,8 @@ fn generate_random_initial_state(state: &State) -> State {
             .unwrap()
             .to_spvalue(),
     );
+
+    
 
     // Can't do this, no domains
     // let mut state = state.clone();
