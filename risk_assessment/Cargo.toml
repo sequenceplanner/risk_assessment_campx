@@ -23,11 +23,3 @@ serde_json = "1.0.91"
 [build-dependencies]
 # quote = "1.0.23"
 # syn = "1.0.107"
-
-[[bin]]
-name = "runner"
-path = "src/main.rs"
-
-[[bin]]
-name = "emulator"
-path = "src/emulators/emulator.rs"

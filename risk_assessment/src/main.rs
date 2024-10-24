@@ -13,16 +13,58 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let arc_node = Arc::new(Mutex::new(node));
 
     let state = models::minimal::state::state();
+    let (model, state) = models::minimal::model::minimal_model(&state);
     let shared_state = Arc::new(Mutex::new(state));
 
-    r2r::log_info!(NODE_ID, "Spawning tasks...");
+    r2r::log_info!(NODE_ID, "Spawning emulators...");
 
     let arc_node_clone: Arc<Mutex<r2r::Node>> = arc_node.clone();
     tokio::task::spawn(async move {
-        gantry_client_ticker::gantry_client_ticker(arc_node_clone)
+        gantry_emulator::spawn_gantry_emulator_server(
+            arc_node_clone,
+        )
+        .await
+        .unwrap()
+    });
+
+    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+
+    r2r::log_info!(NODE_ID, "Spawning interfaces...");
+
+    let arc_node_clone: Arc<Mutex<r2r::Node>> = arc_node.clone();
+    let shared_state_clone = shared_state.clone();
+    tokio::task::spawn(async move {
+        gantry_client_ticker::spawn_gantry_client_ticker(arc_node_clone, shared_state_clone)
             .await
             .unwrap()
     });
+
+    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+
+    r2r::log_info!(NODE_ID, "Spawning operation planner...");
+
+    let shared_state_clone = shared_state.clone();
+    let model_clone = model.clone();
+    tokio::task::spawn(async move {
+        planner_ticker(&model_clone.name, &model_clone, &shared_state_clone)
+            .await
+            .unwrap()
+    });
+
+    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+
+    r2r::log_info!(NODE_ID, "Spawning operation runner...");
+
+    let shared_state_clone = shared_state.clone();
+    tokio::task::spawn(async move {
+        simple_operation_runner(&model.name, &model, &shared_state_clone, false)
+            .await
+            .unwrap()
+    });
+
+    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+
+    r2r::log_info!(NODE_ID, "Spawning test generator...");
 
     let arc_node_clone: Arc<Mutex<r2r::Node>> = arc_node.clone();
     let shared_state_clone = shared_state.clone();
@@ -59,20 +101,30 @@ async fn perform_test(
     tokio::time::sleep(std::time::Duration::from_millis(2000)).await;
     r2r::log_warn!(NODE_ID, "Tests started.");
 
-    let mut ticker_timer = arc_node
-        .lock()
-        .unwrap()
-        .create_wall_timer(std::time::Duration::from_millis(TEST_TICKER_RATE))?;
-
-    let mut test_case = 0;
-
     let shared_state_local = shared_state.lock().unwrap().clone();
-    while test_case < NUMBER_OF_TEST_CASES {
-        let random_state = generate_random_initial_state(&shared_state_local);
-        let goal = 
 
-        ticker_timer.tick().await?;
-    }
+    let goal = "var:gantry_position_estimated == b";
+    let updated_state = shared_state_local.update("minimal_model_goal", goal.to_spvalue())
+        .update("minimal_model_replan_trigger", true.to_spvalue())
+        .update("minimal_model_replanned", false.to_spvalue());
+
+    *shared_state.lock().unwrap() = updated_state;
+    
+
+    // let mut ticker_timer = arc_node
+    //     .lock()
+    //     .unwrap()
+    //     .create_wall_timer(std::time::Duration::from_millis(TEST_TICKER_RATE))?;
+
+    // let mut test_case = 0;
+
+    // let shared_state_local = shared_state.lock().unwrap().clone();
+    // while test_case < NUMBER_OF_TEST_CASES {
+    //     let random_state = generate_random_initial_state(&shared_state_local);
+    //     let goal = 
+
+    //     ticker_timer.tick().await?;
+    // }
 
     Ok(())
 }

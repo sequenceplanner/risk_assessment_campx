@@ -161,6 +161,8 @@ pub fn minimal_model(state: &State) -> (Model, State) {
                 // planner actions
                 vec!(
                     format!("var:gantry_command_command <- move").as_str(),
+                    format!("var:gantry_position_command <- {pos}").as_str(),
+                    format!("var:gantry_speed_command <- 0.5").as_str(),
                     "var:gantry_request_trigger <- true"
                 ),
                 //runner actions
