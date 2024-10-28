@@ -1,4 +1,4 @@
-use rand::seq::SliceRandom;
+// use rand::seq::SliceRandom;
 use std::error::Error;
 use std::sync::{Arc, Mutex};
 
@@ -36,7 +36,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .unwrap()
     });
 
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     // std::thread::sleep(std::time::Duration::from_millis(1000));
 
     r2r::log_info!(NODE_ID, "Spawning interfaces...");
@@ -50,7 +50,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     });
 
     // std::thread::sleep(std::time::Duration::from_millis(1000));
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
     r2r::log_info!(NODE_ID, "Spawning operation planner...");
 
@@ -62,7 +62,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .unwrap()
     });
 
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     // std::thread::sleep(std::time::Duration::from_millis(1000));
 
     r2r::log_info!(NODE_ID, "Spawning operation runner...");
@@ -74,7 +74,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .unwrap()
     });
 
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     // std::thread::sleep(std::time::Duration::from_millis(1000));
 
     r2r::log_info!(NODE_ID, "Spawning test generator...");
@@ -87,7 +87,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .unwrap()
     });
 
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     // std::thread::sleep(std::time::Duration::from_millis(1000));
 
     // keep the node alive
@@ -110,9 +110,9 @@ async fn perform_test(
     // arc_node: Arc<Mutex<r2r::Node>>,
     shared_state: &Arc<Mutex<State>>,
 ) -> Result<(), Box<dyn Error>> {
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+    tokio::time::sleep(std::time::Duration::from_millis(2000)).await;
     r2r::log_warn!(NODE_ID, "Starting tests...");
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+    tokio::time::sleep(std::time::Duration::from_millis(2000)).await;
     r2r::log_warn!(NODE_ID, "Tests started.");
 
     let shared_state_local = shared_state.lock().unwrap().clone();

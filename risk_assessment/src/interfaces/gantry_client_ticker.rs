@@ -50,15 +50,21 @@ pub async fn gantry_client_ticker(
 
     loop {
         let state = shared_state.lock().unwrap().clone();
-        let request_trigger = state.get_or_default_bool(target, "gantry_request_trigger");
-        let request_state = state.get_or_default_string(target, "gantry_request_state");
-        let total_fail_counter = state.get_or_default_i64(target, "gantry_total_fail_counter");
-        let subsequent_fail_counter =
+        let mut request_trigger = state.get_or_default_bool(target, "gantry_request_trigger");
+        let mut request_state = state.get_or_default_string(target, "gantry_request_state");
+        let mut total_fail_counter = state.get_or_default_i64(target, "gantry_total_fail_counter");
+        let mut subsequent_fail_counter =
             state.get_or_default_i64(target, "gantry_subsequent_fail_counter");
         let gantry_command_command = state.get_or_default_string(target, "gantry_command_command");
         let gantry_speed_command = state.get_or_default_f64(target, "gantry_speed_command");
         let gantry_position_command =
             state.get_or_default_string(target, "gantry_position_command");
+        let mut gantry_position_estimated =
+            state.get_or_default_string(target, "gantry_position_estimated");
+        let mut gantry_calibrated_estimated =
+            state.get_or_default_bool(target, "gantry_calibrated_estimated");
+        let mut gantry_locked_estimated =
+            state.get_bool(target, "gantry_locked_estimated");
         let emulate_execution_time =
             state.get_or_default_i64(target, "gantry_emulate_execution_time");
         let emulated_execution_time =
@@ -72,6 +78,7 @@ pub async fn gantry_client_ticker(
             state.get_or_default_array_of_strings(target, "gantry_emulated_failure_cause");
 
         if request_trigger {
+            request_trigger = false;
             if request_state == ServiceRequestState::Initial.to_string() {
                 r2r::log_info!(
                     "gantry_interface",
@@ -92,7 +99,7 @@ pub async fn gantry_client_ticker(
                     },
                 };
 
-                let updated_state = match client.request(&request) {
+                match client.request(&request) {
                     Ok(future) => match future.await {
                         Ok(response) => match gantry_command_command.as_str() {
                             "move" => {
@@ -102,35 +109,18 @@ pub async fn gantry_client_ticker(
                                         "Requested move to '{}' succeeded.",
                                         gantry_position_command
                                     );
-                                    state
-                                        .update(
-                                            "gantry_request_state",
-                                            ServiceRequestState::Succeeded.to_string().to_spvalue(),
-                                        )
-                                        .update(
-                                            "gantry_position_estimated",
-                                            gantry_position_command.to_spvalue(),
-                                        )
-                                        .update("gantry_subsequent_fail_counter", 0.to_spvalue())
+                                    request_state = ServiceRequestState::Succeeded.to_string();
+                                    gantry_position_estimated = gantry_position_command;
+                                    subsequent_fail_counter = 0;
                                 } else {
                                     r2r::log_error!(
                                         "gantry_interface",
                                         "Requested move to '{}' failed.",
                                         gantry_position_command
                                     );
-                                    state
-                                        .update(
-                                            "gantry_request_state",
-                                            ServiceRequestState::Failed.to_string().to_spvalue(),
-                                        )
-                                        .update(
-                                            "gantry_subsequent_fail_counter",
-                                            (subsequent_fail_counter + 1).to_spvalue(),
-                                        )
-                                        .update(
-                                            "gantry_total_fail_counter",
-                                            (total_fail_counter + 1).to_spvalue(),
-                                        )
+                                    request_state = ServiceRequestState::Failed.to_string();
+                                    subsequent_fail_counter = subsequent_fail_counter + 1;
+                                    total_fail_counter = total_fail_counter + 1;
                                 }
                             }
                             "calibrate" => {
@@ -139,64 +129,30 @@ pub async fn gantry_client_ticker(
                                         "gantry_interface",
                                         "Requested calibration succeeded."
                                     );
-                                    state
-                                        .update(
-                                            "gantry_request_state",
-                                            ServiceRequestState::Succeeded.to_string().to_spvalue(),
-                                        )
-                                        .update("gantry_calibrated_estimated", true.to_spvalue())
-                                        .update("gantry_subsequent_fail_counter", 0.to_spvalue())
+                                    request_state = ServiceRequestState::Succeeded.to_string();
+                                    gantry_calibrated_estimated = true;
+                                    subsequent_fail_counter = 0;
                                 } else {
                                     r2r::log_error!(
                                         "gantry_interface",
                                         "Requested calibration failed."
                                     );
-                                    state
-                                        .update(
-                                            "gantry_request_state",
-                                            ServiceRequestState::Failed.to_string().to_spvalue(),
-                                        )
-                                        .update(
-                                            "gantry_subsequent_fail_counter",
-                                            (subsequent_fail_counter + 1).to_spvalue(),
-                                        )
-                                        .update(
-                                            "gantry_total_fail_counter",
-                                            (total_fail_counter + 1).to_spvalue(),
-                                        )
+                                    request_state = ServiceRequestState::Failed.to_string();
+                                    subsequent_fail_counter = subsequent_fail_counter + 1;
+                                    total_fail_counter = total_fail_counter + 1;
                                 }
                             }
                             "lock" => {
                                 if response.success {
-                                    r2r::log_info!(
-                                        "gantry_interface",
-                                        "Requested lock succeeded."
-                                    );
-                                    state
-                                        .update(
-                                            "gantry_request_state",
-                                            ServiceRequestState::Succeeded.to_string().to_spvalue(),
-                                        )
-                                        .update("gantry_locked_estimated", true.to_spvalue())
-                                        .update("gantry_subsequent_fail_counter", 0.to_spvalue())
+                                    r2r::log_info!("gantry_interface", "Requested lock succeeded.");
+                                    request_state = ServiceRequestState::Succeeded.to_string();
+                                    gantry_locked_estimated = Some(true);
+                                    subsequent_fail_counter = 0;
                                 } else {
-                                    r2r::log_error!(
-                                        "gantry_interface",
-                                        "Requested lock failed."
-                                    );
-                                    state
-                                        .update(
-                                            "gantry_request_state",
-                                            ServiceRequestState::Failed.to_string().to_spvalue(),
-                                        )
-                                        .update(
-                                            "gantry_subsequent_fail_counter",
-                                            (subsequent_fail_counter + 1).to_spvalue(),
-                                        )
-                                        .update(
-                                            "gantry_total_fail_counter",
-                                            (total_fail_counter + 1).to_spvalue(),
-                                        )
+                                    r2r::log_error!("gantry_interface", "Requested lock failed.");
+                                    request_state = ServiceRequestState::Failed.to_string();
+                                    subsequent_fail_counter = subsequent_fail_counter + 1;
+                                    total_fail_counter = total_fail_counter + 1;
                                 }
                             }
                             "unlock" => {
@@ -205,31 +161,14 @@ pub async fn gantry_client_ticker(
                                         "gantry_interface",
                                         "Requested unlock succeeded."
                                     );
-                                    state
-                                        .update(
-                                            "gantry_request_state",
-                                            ServiceRequestState::Succeeded.to_string().to_spvalue(),
-                                        )
-                                        .update("gantry_locked_estimated", false.to_spvalue())
-                                        .update("gantry_subsequent_fail_counter", 0.to_spvalue())
+                                    request_state = ServiceRequestState::Succeeded.to_string();
+                                    gantry_locked_estimated = Some(false);
+                                    subsequent_fail_counter = 0;
                                 } else {
-                                    r2r::log_error!(
-                                        "gantry_interface",
-                                        "Requested unlock failed."
-                                    );
-                                    state
-                                        .update(
-                                            "gantry_request_state",
-                                            ServiceRequestState::Failed.to_string().to_spvalue(),
-                                        )
-                                        .update(
-                                            "gantry_subsequent_fail_counter",
-                                            (subsequent_fail_counter + 1).to_spvalue(),
-                                        )
-                                        .update(
-                                            "gantry_total_fail_counter",
-                                            (total_fail_counter + 1).to_spvalue(),
-                                        )
+                                    r2r::log_error!("gantry_interface", "Requested unlock failed.");
+                                    request_state = ServiceRequestState::Failed.to_string();
+                                    subsequent_fail_counter = subsequent_fail_counter + 1;
+                                    total_fail_counter = total_fail_counter + 1;
                                 }
                             }
                             _ => {
@@ -238,111 +177,48 @@ pub async fn gantry_client_ticker(
                                     "Requested command '{}' is invalid.",
                                     gantry_command_command
                                 );
-                                state
+                                request_state = ServiceRequestState::Failed.to_string();
+                                subsequent_fail_counter = subsequent_fail_counter + 1;
+                                total_fail_counter = total_fail_counter + 1;
                             }
                         },
                         Err(e) => {
                             r2r::log_info!("gantry_interface", "Request failed with: {e}.");
-                            state
-                                .update(
-                                    "gantry_request_state",
-                                    ServiceRequestState::Failed.to_string().to_spvalue(),
-                                )
-                                .update(
-                                    "gantry_subsequent_fail_counter",
-                                    (subsequent_fail_counter + 1).to_spvalue(),
-                                )
-                                .update(
-                                    "gantry_total_fail_counter",
-                                    (total_fail_counter + 1).to_spvalue(),
-                                )
+                            request_state = ServiceRequestState::Failed.to_string();
+                            subsequent_fail_counter = subsequent_fail_counter + 1;
+                            total_fail_counter = total_fail_counter + 1;
                         }
                     },
                     Err(e) => {
                         r2r::log_info!("gantry_interface", "Request failed with: {e}.");
-                        state
-                            .update(
-                                "gantry_request_state",
-                                ServiceRequestState::Failed.to_string().to_spvalue(),
-                            )
-                            .update(
-                                "gantry_subsequent_fail_counter",
-                                (subsequent_fail_counter + 1).to_spvalue(),
-                            )
-                            .update(
-                                "gantry_total_fail_counter",
-                                (total_fail_counter + 1).to_spvalue(),
-                            )
+                        request_state = ServiceRequestState::Failed.to_string();
+                        subsequent_fail_counter = subsequent_fail_counter + 1;
+                        total_fail_counter = total_fail_counter + 1;
                     }
                 };
-                *shared_state.lock().unwrap() = updated_state;
             }
         }
-
+        let updated_state = state
+            .update("gantry_request_trigger", request_trigger.to_spvalue())
+            .update("gantry_request_state", request_state.to_spvalue())
+            .update("gantry_total_fail_counter", total_fail_counter.to_spvalue())
+            .update(
+                "gantry_subsequent_fail_counter",
+                subsequent_fail_counter.to_spvalue(),
+            )
+            .update(
+                "gantry_position_estimated",
+                gantry_position_estimated.to_spvalue(),
+            )
+            .update(
+                "gantry_calibrated_estimated",
+                gantry_calibrated_estimated.to_spvalue(),
+            )
+            .update(
+                "gantry_locked_estimated",
+                gantry_locked_estimated.to_spvalue(),
+            );
+        *shared_state.lock().unwrap() = updated_state.clone();
         timer.tick().await?;
     }
 }
-
-// pub async fn gantry_client_ticker(
-//     // gantry_cient: &r2r::Client<TriggerGantry::Service>,
-//     // wait_for_server: impl Future<Output = Result<(), Error>>,
-//     // shared_state: &Arc<Mutex<State>>,
-//     // mut timer: r2r::Timer,
-//     // "gantry_interface": &str,
-//     arc_node: Arc<Mutex<r2r::Node>>,
-// ) -> Result<(), Box<dyn std::error::Error>> {
-//     // r2r::log_warn!("gantry_interface", "Waiting for the gantry server...");
-//     // wait_for_server.await?;
-//     // r2r::log_warn!("gantry_interface", "Gantry server available.");
-
-//     loop {
-//     //     let shsl = shared_state.lock().unwrap().clone();
-//     //     let gantry_request_trigger = match shsl.get_value("gantry_request_trigger") {
-//     //         SPValue::Bool(value) => value,
-//     //         _ => false,
-//     //     };
-//     //     let gantry_command = match shsl.get_value("gantry_command") {
-//     //         SPValue::String(value) => value,
-//     //         _ => "unknown".to_string(),
-//     //     };
-//     //     let gantry_request_state = match shsl.get_value("gantry_request_state") {
-//     //         SPValue::String(value) => value,
-//     //         _ => "unknown".to_string(),
-//     //     };
-//     //     if gantry_request_trigger {
-//     //         if gantry_request_state == "initial".to_string() {
-//     //             let request = TriggerGantry::Request {
-//     //                 position: gantry_command.to_string(),
-//     //             };
-
-//     //             let response = gantry_cient
-//     //                 .request(&request)
-//     //                 .expect("Could not send gantry request.")
-//     //                 .await
-//     //                 .expect("Cancelled.");
-
-//     //             let shsl = shared_state.lock().unwrap().clone();
-
-//     //             *shared_state.lock().unwrap() = match response.success {
-//     //                 true => shsl
-//     //                     .update("gantry_request_state", "succeeded".to_spvalue())
-//     //                     .update("gantry_actual_state", response.state.to_spvalue()),
-
-//     //                 false => {
-//     //                     let scanner_fail_counter = match shsl.get_value("fail_counter_gantry") {
-//     //                         SPValue::Int32(value) => value,
-//     //                         _ => 0,
-//     //                     };
-//     //                     shsl.update("gantry_request_state", "failed".to_spvalue())
-//     //                         .update(
-//     //                             "fail_counter_gantry",
-//     //                             (scanner_fail_counter + 1).to_spvalue(),
-//     //                         )
-//     //                 }
-//     //             };
-//     //         }
-//     //     }
-
-//         // timer.tick().await?;
-//     }
-// }
