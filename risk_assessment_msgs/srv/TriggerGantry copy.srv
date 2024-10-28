@@ -1,0 +1,12 @@
+# Request
+string command # move, calibrate, lock, unlock
+float32 speed
+string position
+
+risk_assessment_msgs/Emulation emulated_response
+
+---
+# Response
+bool success
+string failure_cause
+string info
