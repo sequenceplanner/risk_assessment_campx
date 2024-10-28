@@ -230,7 +230,7 @@ pub fn minimal_model(state: &State) -> (Model, State) {
 
         let plan = bfs_operation_planner(
             state.clone(),
-            extract_goal_from_state(model.name, &state.clone()),
+            state.extract_goal(&model.name),
             model.operations.clone(),
             30,
         );

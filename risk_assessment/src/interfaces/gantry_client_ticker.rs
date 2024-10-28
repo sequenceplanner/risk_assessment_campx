@@ -1,8 +1,9 @@
 use crate::*;
+use futures::Future;
 use micro_sp::*;
 use r2r::{
     risk_assessment_msgs::{msg::Emulation, srv::TriggerGantry},
-    QosProfile,
+    Error, QosProfile,
 };
 use std::sync::{Arc, Mutex};
 
@@ -29,6 +30,10 @@ fn get_or_default_i64(name: &str, state: &State) -> i64 {
 fn get_or_default_f64(name: &str, state: &State) -> f64 {
     match state.get_value(name) {
         micro_sp::SPValue::Float64(value) => value.into_inner(),
+        micro_sp::SPValue::UNKNOWN => {
+            r2r::log_warn!(NODE_ID, "Value for '{}' is UNKNOWN.", name);
+            0.0
+        }
         _ => {
             r2r::log_error!(NODE_ID, "Couldn't get '{}' from the shared state.", name);
             0.0
@@ -39,6 +44,10 @@ fn get_or_default_f64(name: &str, state: &State) -> f64 {
 fn get_or_default_string(name: &str, state: &State) -> String {
     match state.get_value(name) {
         micro_sp::SPValue::String(value) => value,
+        micro_sp::SPValue::UNKNOWN => {
+            r2r::log_warn!(NODE_ID, "Value for '{}' is UNKNOWN.", name);
+            "unknown".to_string()
+        }
         _ => {
             r2r::log_error!(NODE_ID, "Couldn't get '{}' from the shared state.", name);
             "unknown".to_string()
@@ -64,7 +73,7 @@ fn get_or_default_array_of_strings(name: &str, state: &State) -> Vec<String> {
 
 pub async fn spawn_gantry_client_ticker(
     arc_node: Arc<Mutex<r2r::Node>>,
-    shared_state: Arc<Mutex<State>>,
+    shared_state: &Arc<Mutex<State>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let client = arc_node
         .lock()
@@ -75,41 +84,56 @@ pub async fn spawn_gantry_client_ticker(
         )?;
     let waiting_for_server = r2r::Node::is_available(&client)?;
 
-    r2r::log_warn!(NODE_ID, "[gantry_client]: Waiting for the gantry server...");
-    waiting_for_server.await?;
-    r2r::log_warn!(NODE_ID, "[gantry_client]: Gantry server available.");
-
-    r2r::log_info!(EMULATOR_NODE_ID, "Gantry interface spawned.");
-
-    let mut timer = arc_node
+    let timer = arc_node
         .lock()
         .unwrap()
         .create_wall_timer(std::time::Duration::from_millis(CLIENT_TICKER_RATE))?;
 
+    let shared_state_clone = shared_state.clone();
+    tokio::task::spawn(async move {
+        match gantry_client_ticker(&client, waiting_for_server, &shared_state_clone, timer).await {
+            Ok(()) => r2r::log_info!(NODE_ID, "Succeeded."),
+            Err(e) => r2r::log_error!(NODE_ID, "Failed with: '{}'.", e),
+        };
+    });
+    Ok(())
+}
+
+pub async fn gantry_client_ticker(
+    client: &r2r::Client<TriggerGantry::Service>,
+    wait_for_server: impl Future<Output = Result<(), Error>>,
+    shared_state: &Arc<Mutex<State>>,
+    mut timer: r2r::Timer,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let target = "gantry_client_ticker";
+    r2r::log_warn!(NODE_ID, "[gantry_client]: Waiting for the gantry server...");
+    wait_for_server.await?;
+    r2r::log_warn!(NODE_ID, "[gantry_client]: Gantry server available.");
+
+    r2r::log_info!(EMULATOR_NODE_ID, "Gantry interface spawned.");
+
     loop {
-        let shared_state_local = shared_state.lock().unwrap().clone();
-        let request_trigger = get_or_default_bool("gantry_request_trigger", &shared_state_local);
-        let request_state = get_or_default_string("gantry_request_state", &shared_state_local);
-        let total_fail_counter =
-            get_or_default_i64("gantry_total_fail_counter", &shared_state_local);
+        let state = shared_state.lock().unwrap().clone();
+        let request_trigger = state.get_or_default_bool(target, "gantry_request_trigger");
+        let request_state = state.get_or_default_string(target, "gantry_request_state");
+        let total_fail_counter = state.get_or_default_i64(target, "gantry_total_fail_counter");
         let subsequent_fail_counter =
-            get_or_default_i64("gantry_subsequent_fail_counter", &shared_state_local);
-        let gantry_command_command =
-            get_or_default_string("gantry_command_command", &shared_state_local);
-        let gantry_speed_command = get_or_default_f64("gantry_speed_command", &shared_state_local);
+            state.get_or_default_i64(target, "gantry_subsequent_fail_counter");
+        let gantry_command_command = state.get_or_default_string(target, "gantry_command_command");
+        let gantry_speed_command = state.get_or_default_f64(target, "gantry_speed_command");
         let gantry_position_command =
-            get_or_default_string("gantry_position_command", &shared_state_local);
+            state.get_or_default_string(target, "gantry_position_command");
         let emulate_execution_time =
-            get_or_default_i64("emulate_execution_time", &shared_state_local);
+            state.get_or_default_i64(target, "gantry_emulate_execution_time");
         let emulated_execution_time =
-            get_or_default_i64("emulated_execution_time", &shared_state_local);
-        let emulate_failure_rate = get_or_default_i64("emulate_failure_rate", &shared_state_local);
+            state.get_or_default_i64(target, "gantry_emulated_execution_time");
+        let emulate_failure_rate = state.get_or_default_i64(target, "gantry_emulate_failure_rate");
         let emulated_failure_rate =
-            get_or_default_i64("emulated_failure_rate", &shared_state_local);
+            state.get_or_default_i64(target, "gantry_emulated_failure_rate");
         let emulate_failure_cause =
-            get_or_default_i64("emulate_failure_cause", &shared_state_local);
+            state.get_or_default_i64(target, "gantry_emulate_failure_cause");
         let emulated_failure_cause =
-            get_or_default_array_of_strings("emulated_failure_cause", &shared_state_local);
+            state.get_or_default_array_of_strings(target, "gantry_emulated_failure_cause");
 
         if request_trigger {
             if request_state == ServiceRequestState::Initial.to_string() {
@@ -142,7 +166,7 @@ pub async fn spawn_gantry_client_ticker(
                                         "[gantry_client]: Requested move to '{}' succeeded.",
                                         gantry_position_command
                                     );
-                                    shared_state_local
+                                    state
                                         .update(
                                             "gantry_request_state",
                                             ServiceRequestState::Succeeded.to_string().to_spvalue(),
@@ -158,7 +182,7 @@ pub async fn spawn_gantry_client_ticker(
                                         "[gantry_client]: Requested move to '{}' failed.",
                                         gantry_position_command
                                     );
-                                    shared_state_local
+                                    state
                                         .update(
                                             "gantry_request_state",
                                             ServiceRequestState::Failed.to_string().to_spvalue(),
@@ -179,7 +203,7 @@ pub async fn spawn_gantry_client_ticker(
                                         NODE_ID,
                                         "[gantry_client]: Requested calibration succeeded."
                                     );
-                                    shared_state_local
+                                    state
                                         .update(
                                             "gantry_request_state",
                                             ServiceRequestState::Succeeded.to_string().to_spvalue(),
@@ -191,7 +215,7 @@ pub async fn spawn_gantry_client_ticker(
                                         NODE_ID,
                                         "[gantry_client]: Requested calibration failed."
                                     );
-                                    shared_state_local
+                                    state
                                         .update(
                                             "gantry_request_state",
                                             ServiceRequestState::Failed.to_string().to_spvalue(),
@@ -212,7 +236,7 @@ pub async fn spawn_gantry_client_ticker(
                                         NODE_ID,
                                         "[gantry_client]: Requested lock succeeded."
                                     );
-                                    shared_state_local
+                                    state
                                         .update(
                                             "gantry_request_state",
                                             ServiceRequestState::Succeeded.to_string().to_spvalue(),
@@ -224,7 +248,7 @@ pub async fn spawn_gantry_client_ticker(
                                         NODE_ID,
                                         "[gantry_client]: Requested lock failed."
                                     );
-                                    shared_state_local
+                                    state
                                         .update(
                                             "gantry_request_state",
                                             ServiceRequestState::Failed.to_string().to_spvalue(),
@@ -245,7 +269,7 @@ pub async fn spawn_gantry_client_ticker(
                                         NODE_ID,
                                         "[gantry_client]: Requested unlock succeeded."
                                     );
-                                    shared_state_local
+                                    state
                                         .update(
                                             "gantry_request_state",
                                             ServiceRequestState::Succeeded.to_string().to_spvalue(),
@@ -257,7 +281,7 @@ pub async fn spawn_gantry_client_ticker(
                                         NODE_ID,
                                         "[gantry_client]: Requested unlock failed."
                                     );
-                                    shared_state_local
+                                    state
                                         .update(
                                             "gantry_request_state",
                                             ServiceRequestState::Failed.to_string().to_spvalue(),
@@ -278,12 +302,12 @@ pub async fn spawn_gantry_client_ticker(
                                     "[gantry_client]: Requested command '{}' is invalid.",
                                     gantry_command_command
                                 );
-                                shared_state_local
+                                state
                             }
                         },
                         Err(e) => {
                             r2r::log_info!(NODE_ID, "[gantry_client]: Request failed with: {e}.");
-                            shared_state_local
+                            state
                                 .update(
                                     "gantry_request_state",
                                     ServiceRequestState::Failed.to_string().to_spvalue(),
@@ -300,7 +324,7 @@ pub async fn spawn_gantry_client_ticker(
                     },
                     Err(e) => {
                         r2r::log_info!(NODE_ID, "[gantry_client]: Request failed with: {e}.");
-                        shared_state_local
+                        state
                             .update(
                                 "gantry_request_state",
                                 ServiceRequestState::Failed.to_string().to_spvalue(),

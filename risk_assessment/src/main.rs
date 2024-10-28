@@ -7,74 +7,88 @@ use risk_assessment::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    // setup the node
+
+    // Logs from extern crates to stdout
+    initialize_env_logger();
+
+    // Enable coverability tracking:
+    let coverability_tracking = false; 
+
+    // Setup the node
     let ctx = r2r::Context::create()?;
     let node = r2r::Node::create(ctx, NODE_ID, "")?;
     let arc_node = Arc::new(Mutex::new(node));
 
     let state = models::minimal::state::state();
     let (model, state) = models::minimal::model::minimal_model(&state);
-    let shared_state = Arc::new(Mutex::new(state));
+
+    // Add the variables that keep track of the runner state
+    let runner_vars = generate_runner_state_variables(&model, &model.name, coverability_tracking);
+    let updated_state = state.extend(runner_vars, true);
+    let shared_state = Arc::new(Mutex::new(updated_state));
 
     r2r::log_info!(NODE_ID, "Spawning emulators...");
 
     let arc_node_clone: Arc<Mutex<r2r::Node>> = arc_node.clone();
     tokio::task::spawn(async move {
-        gantry_emulator::spawn_gantry_emulator_server(
-            arc_node_clone,
-        )
-        .await
-        .unwrap()
+        spawn_gantry_emulator_server(arc_node_clone)
+            .await
+            .unwrap()
     });
 
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+    // tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+    std::thread::sleep(std::time::Duration::from_millis(1000));
 
     r2r::log_info!(NODE_ID, "Spawning interfaces...");
 
     let arc_node_clone: Arc<Mutex<r2r::Node>> = arc_node.clone();
     let shared_state_clone = shared_state.clone();
     tokio::task::spawn(async move {
-        gantry_client_ticker::spawn_gantry_client_ticker(arc_node_clone, shared_state_clone)
+        spawn_gantry_client_ticker(arc_node_clone, &shared_state_clone)
             .await
             .unwrap()
     });
 
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+    std::thread::sleep(std::time::Duration::from_millis(1000));
+    // tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
 
     r2r::log_info!(NODE_ID, "Spawning operation planner...");
 
     let shared_state_clone = shared_state.clone();
     let model_clone = model.clone();
     tokio::task::spawn(async move {
-        planner_ticker(&model_clone.name, &model_clone, &shared_state_clone)
+        planner_ticker(&model_clone, &shared_state_clone)
             .await
             .unwrap()
     });
 
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+    // tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+    std::thread::sleep(std::time::Duration::from_millis(1000));
 
     r2r::log_info!(NODE_ID, "Spawning operation runner...");
 
     let shared_state_clone = shared_state.clone();
     tokio::task::spawn(async move {
-        simple_operation_runner(&model.name, &model, &shared_state_clone, false)
+        operation_runner(&model, &shared_state_clone)
             .await
             .unwrap()
     });
 
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+    // tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+    std::thread::sleep(std::time::Duration::from_millis(1000));
 
     r2r::log_info!(NODE_ID, "Spawning test generator...");
 
-    let arc_node_clone: Arc<Mutex<r2r::Node>> = arc_node.clone();
+    // let arc_node_clone: Arc<Mutex<r2r::Node>> = arc_node.clone();
     let shared_state_clone = shared_state.clone();
     tokio::task::spawn(async move {
-        perform_test(arc_node_clone, shared_state_clone)
+        perform_test(&shared_state_clone)
             .await
             .unwrap()
     });
 
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+    // tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+    std::thread::sleep(std::time::Duration::from_millis(1000));
 
     // keep the node alive
     let arc_node_clone: Arc<Mutex<r2r::Node>> = arc_node.clone();
@@ -93,8 +107,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 async fn perform_test(
-    arc_node: Arc<Mutex<r2r::Node>>,
-    shared_state: Arc<Mutex<State>>,
+    // arc_node: Arc<Mutex<r2r::Node>>,
+    shared_state: &Arc<Mutex<State>>,
 ) -> Result<(), Box<dyn Error>> {
     tokio::time::sleep(std::time::Duration::from_millis(2000)).await;
     r2r::log_warn!(NODE_ID, "Starting tests...");
@@ -104,12 +118,12 @@ async fn perform_test(
     let shared_state_local = shared_state.lock().unwrap().clone();
 
     let goal = "var:gantry_position_estimated == b";
-    let updated_state = shared_state_local.update("minimal_model_goal", goal.to_spvalue())
+    let updated_state = shared_state_local
+        .update("minimal_model_goal", goal.to_spvalue())
         .update("minimal_model_replan_trigger", true.to_spvalue())
         .update("minimal_model_replanned", false.to_spvalue());
 
     *shared_state.lock().unwrap() = updated_state;
-    
 
     // let mut ticker_timer = arc_node
     //     .lock()
@@ -121,7 +135,7 @@ async fn perform_test(
     // let shared_state_local = shared_state.lock().unwrap().clone();
     // while test_case < NUMBER_OF_TEST_CASES {
     //     let random_state = generate_random_initial_state(&shared_state_local);
-    //     let goal = 
+    //     let goal =
 
     //     ticker_timer.tick().await?;
     // }
@@ -155,8 +169,6 @@ fn generate_random_initial_state(state: &State) -> State {
             .unwrap()
             .to_spvalue(),
     );
-
-    
 
     // Can't do this, no domains
     // let mut state = state.clone();
