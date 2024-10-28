@@ -7,70 +7,6 @@ use r2r::{
 };
 use std::sync::{Arc, Mutex};
 
-fn get_or_default_bool(name: &str, state: &State) -> bool {
-    match state.get_value(name) {
-        micro_sp::SPValue::Bool(value) => value,
-        _ => {
-            r2r::log_error!(NODE_ID, "Couldn't get '{}' from the shared state.", name);
-            false
-        }
-    }
-}
-
-fn get_or_default_i64(name: &str, state: &State) -> i64 {
-    match state.get_value(name) {
-        micro_sp::SPValue::Int64(value) => value,
-        _ => {
-            r2r::log_error!(NODE_ID, "Couldn't get '{}' from the shared state.", name);
-            0
-        }
-    }
-}
-
-fn get_or_default_f64(name: &str, state: &State) -> f64 {
-    match state.get_value(name) {
-        micro_sp::SPValue::Float64(value) => value.into_inner(),
-        micro_sp::SPValue::UNKNOWN => {
-            r2r::log_warn!(NODE_ID, "Value for '{}' is UNKNOWN.", name);
-            0.0
-        }
-        _ => {
-            r2r::log_error!(NODE_ID, "Couldn't get '{}' from the shared state.", name);
-            0.0
-        }
-    }
-}
-
-fn get_or_default_string(name: &str, state: &State) -> String {
-    match state.get_value(name) {
-        micro_sp::SPValue::String(value) => value,
-        micro_sp::SPValue::UNKNOWN => {
-            r2r::log_warn!(NODE_ID, "Value for '{}' is UNKNOWN.", name);
-            "unknown".to_string()
-        }
-        _ => {
-            r2r::log_error!(NODE_ID, "Couldn't get '{}' from the shared state.", name);
-            "unknown".to_string()
-        }
-    }
-}
-
-fn get_or_default_array_of_strings(name: &str, state: &State) -> Vec<String> {
-    match state.get_value(name) {
-        micro_sp::SPValue::Array(SPValueType::String, arr) => arr
-            .iter()
-            .map(|x| match x {
-                micro_sp::SPValue::String(value) => value.clone(),
-                _ => "unknown".to_string(),
-            })
-            .collect(),
-        _ => {
-            r2r::log_error!(NODE_ID, "Couldn't get '{}' from the shared state.", name);
-            vec![]
-        }
-    }
-}
-
 pub async fn spawn_gantry_client_ticker(
     arc_node: Arc<Mutex<r2r::Node>>,
     shared_state: &Arc<Mutex<State>>,
@@ -92,8 +28,8 @@ pub async fn spawn_gantry_client_ticker(
     let shared_state_clone = shared_state.clone();
     tokio::task::spawn(async move {
         match gantry_client_ticker(&client, waiting_for_server, &shared_state_clone, timer).await {
-            Ok(()) => r2r::log_info!(NODE_ID, "Succeeded."),
-            Err(e) => r2r::log_error!(NODE_ID, "Failed with: '{}'.", e),
+            Ok(()) => r2r::log_info!("gantry_interface", "Succeeded."),
+            Err(e) => r2r::log_error!("gantry_interface", "Failed with: '{}'.", e),
         };
     });
     Ok(())
@@ -106,11 +42,11 @@ pub async fn gantry_client_ticker(
     mut timer: r2r::Timer,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let target = "gantry_client_ticker";
-    r2r::log_warn!(NODE_ID, "[gantry_client]: Waiting for the gantry server...");
+    r2r::log_warn!("gantry_interface", "Waiting for the server...");
     wait_for_server.await?;
-    r2r::log_warn!(NODE_ID, "[gantry_client]: Gantry server available.");
+    r2r::log_info!("gantry_interface", "Server available.");
 
-    r2r::log_info!(EMULATOR_NODE_ID, "Gantry interface spawned.");
+    r2r::log_info!("gantry_interface", "Gantry interface spawned.");
 
     loop {
         let state = shared_state.lock().unwrap().clone();
@@ -138,8 +74,8 @@ pub async fn gantry_client_ticker(
         if request_trigger {
             if request_state == ServiceRequestState::Initial.to_string() {
                 r2r::log_info!(
-                    NODE_ID,
-                    "[gantry_client]: Requesting to {}.",
+                    "gantry_interface",
+                    "Requesting to {}.",
                     gantry_command_command
                 );
                 let request = TriggerGantry::Request {
@@ -162,8 +98,8 @@ pub async fn gantry_client_ticker(
                             "move" => {
                                 if response.success {
                                     r2r::log_info!(
-                                        NODE_ID,
-                                        "[gantry_client]: Requested move to '{}' succeeded.",
+                                        "gantry_interface",
+                                        "Requested move to '{}' succeeded.",
                                         gantry_position_command
                                     );
                                     state
@@ -178,8 +114,8 @@ pub async fn gantry_client_ticker(
                                         .update("gantry_subsequent_fail_counter", 0.to_spvalue())
                                 } else {
                                     r2r::log_error!(
-                                        NODE_ID,
-                                        "[gantry_client]: Requested move to '{}' failed.",
+                                        "gantry_interface",
+                                        "Requested move to '{}' failed.",
                                         gantry_position_command
                                     );
                                     state
@@ -200,8 +136,8 @@ pub async fn gantry_client_ticker(
                             "calibrate" => {
                                 if response.success {
                                     r2r::log_info!(
-                                        NODE_ID,
-                                        "[gantry_client]: Requested calibration succeeded."
+                                        "gantry_interface",
+                                        "Requested calibration succeeded."
                                     );
                                     state
                                         .update(
@@ -212,8 +148,8 @@ pub async fn gantry_client_ticker(
                                         .update("gantry_subsequent_fail_counter", 0.to_spvalue())
                                 } else {
                                     r2r::log_error!(
-                                        NODE_ID,
-                                        "[gantry_client]: Requested calibration failed."
+                                        "gantry_interface",
+                                        "Requested calibration failed."
                                     );
                                     state
                                         .update(
@@ -233,8 +169,8 @@ pub async fn gantry_client_ticker(
                             "lock" => {
                                 if response.success {
                                     r2r::log_info!(
-                                        NODE_ID,
-                                        "[gantry_client]: Requested lock succeeded."
+                                        "gantry_interface",
+                                        "Requested lock succeeded."
                                     );
                                     state
                                         .update(
@@ -245,8 +181,8 @@ pub async fn gantry_client_ticker(
                                         .update("gantry_subsequent_fail_counter", 0.to_spvalue())
                                 } else {
                                     r2r::log_error!(
-                                        NODE_ID,
-                                        "[gantry_client]: Requested lock failed."
+                                        "gantry_interface",
+                                        "Requested lock failed."
                                     );
                                     state
                                         .update(
@@ -266,8 +202,8 @@ pub async fn gantry_client_ticker(
                             "unlock" => {
                                 if response.success {
                                     r2r::log_info!(
-                                        NODE_ID,
-                                        "[gantry_client]: Requested unlock succeeded."
+                                        "gantry_interface",
+                                        "Requested unlock succeeded."
                                     );
                                     state
                                         .update(
@@ -278,8 +214,8 @@ pub async fn gantry_client_ticker(
                                         .update("gantry_subsequent_fail_counter", 0.to_spvalue())
                                 } else {
                                     r2r::log_error!(
-                                        NODE_ID,
-                                        "[gantry_client]: Requested unlock failed."
+                                        "gantry_interface",
+                                        "Requested unlock failed."
                                     );
                                     state
                                         .update(
@@ -298,15 +234,15 @@ pub async fn gantry_client_ticker(
                             }
                             _ => {
                                 r2r::log_info!(
-                                    NODE_ID,
-                                    "[gantry_client]: Requested command '{}' is invalid.",
+                                    "gantry_interface",
+                                    "Requested command '{}' is invalid.",
                                     gantry_command_command
                                 );
                                 state
                             }
                         },
                         Err(e) => {
-                            r2r::log_info!(NODE_ID, "[gantry_client]: Request failed with: {e}.");
+                            r2r::log_info!("gantry_interface", "Request failed with: {e}.");
                             state
                                 .update(
                                     "gantry_request_state",
@@ -323,7 +259,7 @@ pub async fn gantry_client_ticker(
                         }
                     },
                     Err(e) => {
-                        r2r::log_info!(NODE_ID, "[gantry_client]: Request failed with: {e}.");
+                        r2r::log_info!("gantry_interface", "Request failed with: {e}.");
                         state
                             .update(
                                 "gantry_request_state",
@@ -352,12 +288,12 @@ pub async fn gantry_client_ticker(
 //     // wait_for_server: impl Future<Output = Result<(), Error>>,
 //     // shared_state: &Arc<Mutex<State>>,
 //     // mut timer: r2r::Timer,
-//     // node_id: &str,
+//     // "gantry_interface": &str,
 //     arc_node: Arc<Mutex<r2r::Node>>,
 // ) -> Result<(), Box<dyn std::error::Error>> {
-//     // r2r::log_warn!(node_id, "Waiting for the gantry server...");
+//     // r2r::log_warn!("gantry_interface", "Waiting for the gantry server...");
 //     // wait_for_server.await?;
-//     // r2r::log_warn!(node_id, "Gantry server available.");
+//     // r2r::log_warn!("gantry_interface", "Gantry server available.");
 
 //     loop {
 //     //     let shsl = shared_state.lock().unwrap().clone();

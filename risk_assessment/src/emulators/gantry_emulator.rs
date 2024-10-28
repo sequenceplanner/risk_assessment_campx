@@ -6,8 +6,6 @@ use r2r::ServiceRequest;
 use rand::Rng;
 use std::sync::{Arc, Mutex};
 
-use crate::*;
-
 pub async fn spawn_gantry_emulator_server(
     arc_node: Arc<Mutex<r2r::Node>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -22,8 +20,8 @@ pub async fn spawn_gantry_emulator_server(
     tokio::task::spawn(async move {
         let result = gantry_emlator_server(service).await;
         match result {
-            Ok(()) => r2r::log_info!(EMULATOR_NODE_ID, "Gantry service call succeeded."),
-            Err(e) => r2r::log_error!(EMULATOR_NODE_ID, "Gantry service call failed with: {}.", e),
+            Ok(()) => r2r::log_info!("gantry_emulator", "Service call succeeded."),
+            Err(e) => r2r::log_error!("gantry_emulator", "Service call failed with: {}.", e),
         };
     });
     Ok(())
@@ -32,7 +30,7 @@ pub async fn spawn_gantry_emulator_server(
 async fn gantry_emlator_server(
     mut service: impl Stream<Item = ServiceRequest<TriggerGantry::Service>> + Unpin,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    r2r::log_info!(EMULATOR_NODE_ID, "Gantry emulator spawned.");
+    r2r::log_info!("gantry_emulator", "Spawned.");
     loop {
         match service.next().await {
             Some(request) => {
@@ -69,39 +67,39 @@ async fn gantry_emlator_server(
 
                 match request.message.command.as_str() {
                     "move" => r2r::log_info!(
-                        EMULATOR_NODE_ID,
-                        "Gantry: Got request to move to {}.",
+                        "gantry_emulator",
+                        "Got request to move to {}.",
                         request.message.position
                     ),
                     "calibrate" => {
-                        r2r::log_info!(EMULATOR_NODE_ID, "Gantry: Got request to calibrate.")
+                        r2r::log_info!("gantry_emulator", "Got request to calibrate.")
                     }
-                    "lock" => r2r::log_info!(EMULATOR_NODE_ID, "Gantry: Got request to lock."),
-                    "unlock" => r2r::log_info!(EMULATOR_NODE_ID, "Gantry: Got request to unlock."),
+                    "lock" => r2r::log_info!("gantry_emulator", "Got request to lock."),
+                    "unlock" => r2r::log_info!("gantry_emulator", "Got request to unlock."),
                     _ => {
-                        r2r::log_warn!(EMULATOR_NODE_ID, "Gantry: Unknown command");
+                        r2r::log_warn!("gantry_emulator", "Unknown command");
                         fail = true;
                     },
                 };
 
                 let success_info = match request.message.command.as_str() {
-                    "move" => format!("Gantry: Succeeded to move to {}.",
+                    "move" => format!("Succeeded to move to {}.",
                         request.message.position
                     ),
-                    "calibrate" => "Gantry: Succeeded to calibrate.".to_string(),
-                    "lock" => "Gantry: Succeeded to lock.".to_string(),
-                    "unlock" => "Gantry: Succeeded to unlock.".to_string(),
-                    _ => "Gantry: Failed, unknown command".to_string()
+                    "calibrate" => "Succeeded to calibrate.".to_string(),
+                    "lock" => "Succeeded to lock.".to_string(),
+                    "unlock" => "Succeeded to unlock.".to_string(),
+                    _ => "Failed, unknown command".to_string()
                 };
 
                 let failure_info = match request.message.command.as_str() {
-                    "move" => format!("Gantry: Failed to move to {} due to {}.",
+                    "move" => format!("Failed to move to {} due to {}.",
                         request.message.position, cause
                     ),
-                    "calibrate" => format!("Gantry: Failed to calibrate due to {}.", cause),
-                    "lock" => format!("Gantry: Failed to lock due to {}.", cause),
-                    "unlock" => format!("Gantry: Failed to unlock due to {}.", cause),
-                    _ => "Gantry: Failed, unknown command".to_string()
+                    "calibrate" => format!("Failed to calibrate due to {}.", cause),
+                    "lock" => format!("Failed to lock due to {}.", cause),
+                    "unlock" => format!("Failed to unlock due to {}.", cause),
+                    _ => "Failed, unknown command".to_string()
                 };
 
                 if !fail {
@@ -110,7 +108,7 @@ async fn gantry_emlator_server(
                         failure_cause: "".to_string(),
                         info: success_info.clone(),
                     };
-                    r2r::log_info!(NODE_ID, "{}", success_info);
+                    r2r::log_info!("gantry_emulator", "{}", success_info);
                     request
                         .respond(response)
                         .expect("Could not send service response.");
@@ -121,7 +119,7 @@ async fn gantry_emlator_server(
                         failure_cause: cause,
                         info: failure_info.clone(),
                     };
-                    r2r::log_error!(NODE_ID, "{}", failure_info);
+                    r2r::log_error!("gantry_emulator", "{}", failure_info);
                     request
                         .respond(response)
                         .expect("Could not send service response.");

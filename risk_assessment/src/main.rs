@@ -36,8 +36,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .unwrap()
     });
 
-    // tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
-    std::thread::sleep(std::time::Duration::from_millis(1000));
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    // std::thread::sleep(std::time::Duration::from_millis(1000));
 
     r2r::log_info!(NODE_ID, "Spawning interfaces...");
 
@@ -49,8 +49,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .unwrap()
     });
 
-    std::thread::sleep(std::time::Duration::from_millis(1000));
-    // tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+    // std::thread::sleep(std::time::Duration::from_millis(1000));
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
     r2r::log_info!(NODE_ID, "Spawning operation planner...");
 
@@ -62,8 +62,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .unwrap()
     });
 
-    // tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
-    std::thread::sleep(std::time::Duration::from_millis(1000));
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    // std::thread::sleep(std::time::Duration::from_millis(1000));
 
     r2r::log_info!(NODE_ID, "Spawning operation runner...");
 
@@ -74,8 +74,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .unwrap()
     });
 
-    // tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
-    std::thread::sleep(std::time::Duration::from_millis(1000));
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    // std::thread::sleep(std::time::Duration::from_millis(1000));
 
     r2r::log_info!(NODE_ID, "Spawning test generator...");
 
@@ -87,8 +87,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .unwrap()
     });
 
-    // tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
-    std::thread::sleep(std::time::Duration::from_millis(1000));
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    // std::thread::sleep(std::time::Duration::from_millis(1000));
 
     // keep the node alive
     let arc_node_clone: Arc<Mutex<r2r::Node>> = arc_node.clone();
@@ -110,9 +110,9 @@ async fn perform_test(
     // arc_node: Arc<Mutex<r2r::Node>>,
     shared_state: &Arc<Mutex<State>>,
 ) -> Result<(), Box<dyn Error>> {
-    tokio::time::sleep(std::time::Duration::from_millis(2000)).await;
+    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
     r2r::log_warn!(NODE_ID, "Starting tests...");
-    tokio::time::sleep(std::time::Duration::from_millis(2000)).await;
+    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
     r2r::log_warn!(NODE_ID, "Tests started.");
 
     let shared_state_local = shared_state.lock().unwrap().clone();
@@ -147,28 +147,28 @@ async fn perform_test(
 // let state = state.add(assign!(gantry_command_command, SPValue::UNKNOWN));
 
 // Cannot use choose random from domain because the vars don't have a domain in the informal model
-fn generate_random_initial_state(state: &State) -> State {
-    let state = state.update(
-        "gantry_command_command",
-        vec!["move", "calibrate", "lock", "unlock"]
-            .choose(&mut rand::thread_rng())
-            .unwrap()
-            .to_spvalue(),
-    );
-    let state = state.update(
-        "gantry_command_speed",
-        vec![0.0, 1.0, 2.0]
-            .choose(&mut rand::thread_rng())
-            .unwrap()
-            .to_spvalue(),
-    );
-    let state = state.update(
-        "gantry_position_command",
-        vec!["a", "b", "c", "d"]
-            .choose(&mut rand::thread_rng())
-            .unwrap()
-            .to_spvalue(),
-    );
+// fn generate_random_initial_state(state: &State) -> State {
+//     let state = state.update(
+//         "gantry_command_command",
+//         vec!["move", "calibrate", "lock", "unlock"]
+//             .choose(&mut rand::thread_rng())
+//             .unwrap()
+//             .to_spvalue(),
+//     );
+//     let state = state.update(
+//         "gantry_command_speed",
+//         vec![0.0, 1.0, 2.0]
+//             .choose(&mut rand::thread_rng())
+//             .unwrap()
+//             .to_spvalue(),
+//     );
+//     let state = state.update(
+//         "gantry_position_command",
+//         vec!["a", "b", "c", "d"]
+//             .choose(&mut rand::thread_rng())
+//             .unwrap()
+//             .to_spvalue(),
+//     );
 
     // Can't do this, no domains
     // let mut state = state.clone();
@@ -189,5 +189,5 @@ fn generate_random_initial_state(state: &State) -> State {
     //         SPValueType::UNKNOWN => todo!(),
     //     }
     // }
-    state
-}
+//     state
+// }
