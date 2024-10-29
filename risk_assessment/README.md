@@ -29,3 +29,12 @@ loops.
 the losses defined in the first step. These unsafe control actions are used to create functional requirements and constraints for the system. This step also does not change regardless of whether STPA is being applied to safety, security, privacy, or other properties.
 4. Reasons: The fourth step identifies the reasons why unsafe control might occur in the system.
 
+# State racing possible solutions:
+    // ok the refcount option doesn't work.
+    // try the lockfree crate or similar (video moving beyonc Arc<Mutex<T>>)
+    // or try to shard the mutex and only access data that you have to access instead of the whole state
+    // atombox crate maybe
+    // atomptr crate maybe
+    // or run everythin singlethreaded... that is also an option
+    // or try to have a "copyable" state
+    // try to keep version of the state with something like AtomicUsize

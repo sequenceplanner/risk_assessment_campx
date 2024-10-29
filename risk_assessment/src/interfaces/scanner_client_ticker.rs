@@ -5,17 +5,12 @@ use r2r::{
     risk_assessment_msgs::{msg::Emulation, srv::TriggerGantry},
     Error, QosProfile,
 };
-use std::{
-    collections::HashMap,
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc, Mutex,
-    },
-};
+use std::sync::{atomic::AtomicUsize, Arc, Mutex};
 
-pub async fn spawn_gantry_client_ticker(
+pub async fn spawn_scanner_client_ticker(
     arc_node: Arc<Mutex<r2r::Node>>,
-    shared_state: &Arc<(Mutex<State>, Vec<AtomicUsize>)>,//HashMap<String, AtomicUsize>)>,
+    shared_state: &Arc<Mutex<State>>,
+    version: &Arc<AtomicUsize>
 ) -> Result<(), Box<dyn std::error::Error>> {
     let client = arc_node
         .lock()
@@ -32,8 +27,9 @@ pub async fn spawn_gantry_client_ticker(
         .create_wall_timer(std::time::Duration::from_millis(CLIENT_TICKER_RATE))?;
 
     let shared_state_clone = shared_state.clone();
+    let version_clone = version.clone();
     tokio::task::spawn(async move {
-        match gantry_client_ticker(&client, waiting_for_server, &shared_state_clone, timer).await {
+        match gantry_client_ticker(&client, waiting_for_server, &shared_state_clone, timer, &version_clone).await {
             Ok(()) => r2r::log_info!("gantry_interface", "Succeeded."),
             Err(e) => r2r::log_error!("gantry_interface", "Failed with: '{}'.", e),
         };
@@ -41,71 +37,28 @@ pub async fn spawn_gantry_client_ticker(
     Ok(())
 }
 
-pub async fn gantry_client_ticker(
+pub async fn scanner_client_ticker(
     client: &r2r::Client<TriggerGantry::Service>,
     wait_for_server: impl Future<Output = Result<(), Error>>,
-    shared_state: &Arc<(Mutex<State>, Vec<AtomicUsize>)>,//HashMap<String, AtomicUsize>)>,
+    shared_state: &Arc<Mutex<State>>,
     mut timer: r2r::Timer,
+    version: &Arc<AtomicUsize>
 ) -> Result<(), Box<dyn std::error::Error>> {
     let target = "gantry_client_ticker";
     r2r::log_warn!("gantry_interface", "Waiting for the server...");
     wait_for_server.await?;
     r2r::log_info!("gantry_interface", "Server available.");
 
-    r2r::log_info!("gantry_interface", "Spawned.");
+    r2r::log_info!("gantry_interface", "Gantry interface spawned.");
 
-    // let mut last_known_global_version = match shared_state.1.get("global") {
-    //     Some(version) => version.load(Ordering::SeqCst),
-    //     None => {
-    //         r2r::log_warn!("gantry_interface", "Couldn't get 'global' atomic counter.");
-    //         0
-    //     }
-    // };
-
-    // let mut last_known_local_version = match shared_state.1.get("gantry_interface") {
-    //     Some(version) => version.load(Ordering::SeqCst),
-    //     None => {
-    //         r2r::log_warn!(
-    //             "gantry_interface",
-    //             "Couldn't get 'gantry_interface' atomic counter."
-    //         );
-    //         0
-    //     }
-    // };
-
-    let mut last_known_global_version = shared_state.1[0].load(Ordering::SeqCst);
-    let mut last_known_local_version = 0;
+    // let mut ref_count: i64 = 0;
 
     loop {
-        let current_local_version = shared_state.1[1].load(Ordering::SeqCst);
-        let runner_version = shared_state.1[2].load(Ordering::SeqCst);
-        let planner_version = shared_state.1[3].load(Ordering::SeqCst);
-        // println!("runner_version: {}", runner_version);
-        // println!("planner_version: {}", planner_version);
-        // println!("current_local_version: {}", current_local_version);
-    //     let mut current_local_version = match shared_state.1.get("gantry_interface") {
-    //         Some(version) => version.load(Ordering::SeqCst),
-    //         None => {
-    //             r2r::log_warn!(
-    //                 "gantry_interface",
-    //                 "Couldn't get 'gantry_interface' atomic counter."
-    //             );
-    //             0
-    //         }
-    //     };
-
-        // 4 scenarios:
-            //
-
-        if current_local_version != last_known_local_version {
-            // state has been updated by the "gantry_interface" task
-            // println!(
-            //     "{} - {}",
-            //     current_local_version, last_known_local_version
-            // );
-            // r2r::log_warn!("gantry_interface", "state has been updated by the 'gantry_interface' task");
-            last_known_local_version = current_local_version;
-            let state = shared_state.0.lock().unwrap().clone();
+        let state = shared_state.lock().unwrap().clone();
+        // let ref_counter = state.get_or_default_i64(target, "gantry_ref_counter");
+        // println!("{} - {}", ref_counter, ref_count);
+        // if ref_counter > ref_count {
+        //     ref_count = ref_counter;
             let mut request_trigger = state.get_or_default_bool(target, "gantry_request_trigger");
             let mut request_state = state.get_or_default_string(target, "gantry_request_state");
             let mut total_fail_counter =
@@ -285,19 +238,12 @@ pub async fn gantry_client_ticker(
                     "gantry_locked_estimated",
                     gantry_locked_estimated.to_spvalue(),
                 );
-            // shared_state
-            //     .1
-            //     .entry("gantry_interface".to_string())
-            //     .and_modify(|version| {
-            //         version.fetch_add(1, Ordering::SeqCst);
-            //     })
-            //     .or_default();
-            shared_state.1[1].fetch_add(1, Ordering::SeqCst);
-            *shared_state.0.lock().unwrap() = updated_state.clone();
-        } else {
-            r2r::log_warn!("gantry_interface", "state has not yet been updated by the 'gantry_interface' task");
-            // state has not yet been updated by the "gantry_interface" task
-        }
+                // .update("gantry_ref_counter", (ref_counter + 1).to_spvalue());
+            *shared_state.lock().unwrap() = updated_state.clone();
+        // } else {
+        //     let updated_state = state.update("gantry_ref_counter", (ref_counter + 1).to_spvalue());
+        //     *shared_state.lock().unwrap() = updated_state.clone();
+        // }
         timer.tick().await?;
     }
 }
