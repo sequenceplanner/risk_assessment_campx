@@ -22,11 +22,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let arc_node = Arc::new(Mutex::new(node));
 
     let state = models::minimal::state::state();
-    let (model, state) = models::minimal::model::minimal_model(&state);
 
     // Add the variables that keep track of the runner state
-    let runner_vars = generate_runner_state_variables(&model, &model.name, coverability_tracking);
-    let updated_state = state.extend(runner_vars, true);
+    let runner_vars = generate_runner_state_variables("minimal_model");
+    let state = state.extend(runner_vars, true);
+
+    let (model, state) = models::minimal::model::minimal_model(&state);
+
+    let op_vars = generate_operation_state_variables(&model, false);
+    let state = state.extend(op_vars, true);
 
     // Shared state synchronization
     // let version_tracker = HashMap::from(
@@ -42,11 +46,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let tracker_2 = AtomicUsize::new(1);
     let tracker_3 = AtomicUsize::new(1);
     let tracker_4 = AtomicUsize::new(1);
-    let tracker_5 = AtomicUsize::new(1);
 
-    let version_tracker = vec![tracker_1, tracker_2, tracker_3, tracker_4, tracker_5];
+    let version_tracker = vec![tracker_1, tracker_2, tracker_3, tracker_4];
 
-    let shared_state = Arc::new((Mutex::new(updated_state), version_tracker));
+    let shared_state = Arc::new((Mutex::new(state), version_tracker));
 
     r2r::log_info!(NODE_ID, "Spawning emulators...");
 
@@ -87,6 +90,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let model_clone = model.clone();
     tokio::task::spawn(async move {
         planner_ticker(&model_clone, &shared_state_clone)
+            .await
+            .unwrap()
+    });
+
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+    r2r::log_info!(NODE_ID, "Spawning auto transition runner...");
+
+    let shared_state_clone = shared_state.clone();
+    let model_clone = model.clone();
+    tokio::task::spawn(async move {
+        auto_transition_runner(&model_clone.name, &model_clone, &shared_state_clone, false)
             .await
             .unwrap()
     });
@@ -139,15 +153,16 @@ async fn perform_test(
     // arc_node: Arc<Mutex<r2r::Node>>,
     shared_state: &Arc<(Mutex<State>, Vec<AtomicUsize>)>, //HashMap<String, AtomicUsize>)>,
 ) -> Result<(), Box<dyn Error>> {
-    tokio::time::sleep(std::time::Duration::from_millis(2000)).await;
+    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
     r2r::log_warn!(NODE_ID, "Starting tests...");
-    tokio::time::sleep(std::time::Duration::from_millis(2000)).await;
+    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
     r2r::log_warn!(NODE_ID, "Tests started.");
 
     let shared_state_local = shared_state.0.lock().unwrap().clone();
 
-    let goal = "var:gantry_position_estimated == b";
+    let goal = "var:gantry_position_estimated == d";
     let updated_state = shared_state_local
+        .update("gantry_emulate_failure_rate", 1.to_spvalue())
         .update("minimal_model_goal", goal.to_spvalue())
         .update("minimal_model_replan_trigger", true.to_spvalue())
         .update("minimal_model_replanned", false.to_spvalue());
