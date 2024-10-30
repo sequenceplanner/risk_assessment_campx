@@ -150,7 +150,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 async fn perform_test(
-    // arc_node: Arc<Mutex<r2r::Node>>,
     shared_state: &Arc<(Mutex<State>, Vec<AtomicUsize>)>, //HashMap<String, AtomicUsize>)>,
 ) -> Result<(), Box<dyn Error>> {
     tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
@@ -162,77 +161,22 @@ async fn perform_test(
 
     let goal = "var:gantry_position_estimated == d";
     let updated_state = shared_state_local
+        .update("gantry_emulate_execution_time", 2.to_spvalue())
+        .update("gantry_emulated_execution_time", 3000.to_spvalue())
         .update("gantry_emulate_failure_rate", 2.to_spvalue())
         .update("gantry_emulated_failure_rate", 30.to_spvalue())
+        .update("gantry_emulate_failure_cause", 2.to_spvalue())
+        .update("gantry_emulated_failure_cause", vec!("violation", "collision", "detected_drift").to_spvalue())
         .update("minimal_model_goal", goal.to_spvalue())
         .update("minimal_model_replan_trigger", true.to_spvalue())
         .update("minimal_model_replanned", false.to_spvalue());
 
     *shared_state.0.lock().unwrap() = updated_state;
 
-    // let mut ticker_timer = arc_node
-    //     .lock()
-    //     .unwrap()
-    //     .create_wall_timer(std::time::Duration::from_millis(TEST_TICKER_RATE))?;
+    r2r::log_info!(NODE_ID, "All tests are finished. Generating report...");
 
-    // let mut test_case = 0;
-
-    // let shared_state_local = shared_state.lock().unwrap().clone();
-    // while test_case < NUMBER_OF_TEST_CASES {
-    //     let random_state = generate_random_initial_state(&shared_state_local);
-    //     let goal =
-
-    //     ticker_timer.tick().await?;
-    // }
+    // Measure operation and plan execution times, and measure total failure rates...
+    // Print out plan done or plan failed when done or failed.
 
     Ok(())
 }
-
-// let gantry_position_command = v!("gantry_position_command");
-// let state = state.add(assign!(gantry_command_command, SPValue::UNKNOWN));
-
-// Cannot use choose random from domain because the vars don't have a domain in the informal model
-// fn generate_random_initial_state(state: &State) -> State {
-//     let state = state.update(
-//         "gantry_command_command",
-//         vec!["move", "calibrate", "lock", "unlock"]
-//             .choose(&mut rand::thread_rng())
-//             .unwrap()
-//             .to_spvalue(),
-//     );
-//     let state = state.update(
-//         "gantry_command_speed",
-//         vec![0.0, 1.0, 2.0]
-//             .choose(&mut rand::thread_rng())
-//             .unwrap()
-//             .to_spvalue(),
-//     );
-//     let state = state.update(
-//         "gantry_position_command",
-//         vec!["a", "b", "c", "d"]
-//             .choose(&mut rand::thread_rng())
-//             .unwrap()
-//             .to_spvalue(),
-//     );
-
-    // Can't do this, no domains
-    // let mut state = state.clone();
-    // for v in state.get_all_vars() {
-    //     match v.value_type {
-    //         SPValueType::Bool => {
-    //             let value = vec![false, true]
-    //                 .choose(&mut rand::thread_rng())
-    //                 .unwrap()
-    //                 .clone();
-    //             state = state.update(&v.name, value.to_spvalue());
-    //         }
-    //         SPValueType::Float64 => todo!(),
-    //         SPValueType::Int64 => todo!(),
-    //         SPValueType::String => todo!(),
-    //         SPValueType::Time => todo!(),
-    //         SPValueType::Array => todo!(),
-    //         SPValueType::UNKNOWN => todo!(),
-    //     }
-    // }
-//     state
-// }
