@@ -11,6 +11,7 @@ pub fn minimal_model(state: &State) -> (Model, State) {
         "op_gantry_lock",
         // deadline
         None,
+        Some(3),
         // precondition
         t!(
             // name
@@ -72,6 +73,7 @@ pub fn minimal_model(state: &State) -> (Model, State) {
         "op_gantry_unlock",
         // deadline
         None,
+        Some(3),
         // precondition
         t!(
             // name
@@ -133,6 +135,7 @@ pub fn minimal_model(state: &State) -> (Model, State) {
         "op_gantry_calibrate",
         // deadline
         None,
+        Some(3),
         // precondition
         t!(
             // name
@@ -195,6 +198,7 @@ pub fn minimal_model(state: &State) -> (Model, State) {
             &format!("op_gantry_move_to_{}", pos),
             // deadline
             None,
+            Some(3),
             // precondition
             t!(
                 // name

@@ -162,7 +162,8 @@ async fn perform_test(
 
     let goal = "var:gantry_position_estimated == d";
     let updated_state = shared_state_local
-        .update("gantry_emulate_failure_rate", 1.to_spvalue())
+        .update("gantry_emulate_failure_rate", 2.to_spvalue())
+        .update("gantry_emulated_failure_rate", 30.to_spvalue())
         .update("minimal_model_goal", goal.to_spvalue())
         .update("minimal_model_replan_trigger", true.to_spvalue())
         .update("minimal_model_replanned", false.to_spvalue());

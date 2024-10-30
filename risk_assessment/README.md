@@ -38,3 +38,6 @@ the losses defined in the first step. These unsafe control actions are used to c
     // or run everythin singlethreaded... that is also an option
     // or try to have a "copyable" state
     // try to keep version of the state with something like AtomicUsize
+    // MARTIN: there is no silver bullet, he suggests having a single 
+    //      tread for managing the state and then all other threds communicate with thath thread with mpsc
+    //      Also, try to chop up the state into logical chunks so that not everyone can access everything

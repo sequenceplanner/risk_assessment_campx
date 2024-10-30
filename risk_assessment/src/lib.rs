@@ -15,5 +15,5 @@ pub mod models;
 pub use crate::models::minimal::*;
 
 pub mod utils;
-// pub use crate::utils::state_publisher::*;
+pub use crate::utils::state_publisher::*;
 pub use crate::utils::env_logger::*;
