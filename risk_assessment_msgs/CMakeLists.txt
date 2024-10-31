@@ -22,7 +22,7 @@ find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Emulation.msg"
   "srv/TriggerGantry.srv"
-  "srv/TriggerScanner.srv"
+  "srv/TriggerRobot.srv"
 )
 
 ament_package()

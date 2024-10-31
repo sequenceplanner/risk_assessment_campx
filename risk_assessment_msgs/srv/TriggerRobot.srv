@@ -1,5 +1,5 @@
 # Request
-string command # move, calibrate, lock, unlock
+string command # move, pick, place
 float32 speed
 string position
 

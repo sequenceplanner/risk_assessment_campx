@@ -27,7 +27,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let runner_vars = generate_runner_state_variables("minimal_model");
     let state = state.extend(runner_vars, true);
 
-    let (model, state) = models::minimal::model::minimal_model(&state);
+    let (model, state) = models::minimal::model::minimal_model("minimal_model", &state);
     let name = model.clone().name;
 
     let op_vars = generate_operation_state_variables(&model, false);
