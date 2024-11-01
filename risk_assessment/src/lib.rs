@@ -7,10 +7,11 @@ pub static NUMBER_OF_TEST_CASES: u64 = 20;
 
 pub mod emulators;
 pub use crate::emulators::gantry_emulator::*;
+pub use crate::emulators::robot_emulator::*;
 
 pub mod interfaces;
 pub use crate::interfaces::gantry_client_ticker::*;
-// pub use crate::interfaces::scanner_client_ticker::*;
+pub use crate::interfaces::robot_client_ticker::*;
 
 pub mod models;
 pub use crate::models::minimal::*;

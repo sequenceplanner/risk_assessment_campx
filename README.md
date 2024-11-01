@@ -1,5 +1,7 @@
 # Action based risk assessment support
 
+# Install Rust and rust_analyzer for inlay hints
+
 ## Idea (defning risks and action outcomes with Behavior Trees)
 
 ## Idea (FMEA + STPA):

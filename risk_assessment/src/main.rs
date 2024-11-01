@@ -21,13 +21,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let node = r2r::Node::create(ctx, NODE_ID, "")?;
     let arc_node = Arc::new(Mutex::new(node));
 
-    let state = models::minimal::state::state();
+    let state = models::bt_test_endre::state::state();
 
     // Add the variables that keep track of the runner state
-    let runner_vars = generate_runner_state_variables("minimal_model");
+    let runner_vars = generate_runner_state_variables("bt_test_endre");
     let state = state.extend(runner_vars, true);
 
-    let (model, state) = models::minimal::model::minimal_model("minimal_model", &state);
+    let (model, state) = models::bt_test_endre::model::bt_test_endre("bt_test_endre", &state);
     let name = model.clone().name;
 
     let op_vars = generate_operation_state_variables(&model, false);
@@ -59,6 +59,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
+    let arc_node_clone: Arc<Mutex<r2r::Node>> = arc_node.clone();
+    tokio::task::spawn(async move { spawn_robot_emulator_server(arc_node_clone).await.unwrap() });
+
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
     r2r::log_info!(NODE_ID, "Spawning interfaces...");
 
     let arc_node_clone: Arc<Mutex<r2r::Node>> = arc_node.clone();
@@ -66,6 +71,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // let global_version_clone = global_version.clone();
     tokio::task::spawn(async move {
         spawn_gantry_client_ticker(arc_node_clone, &shared_state_clone)
+            .await
+            .unwrap()
+    });
+
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
+    let arc_node_clone: Arc<Mutex<r2r::Node>> = arc_node.clone();
+    let shared_state_clone = shared_state.clone();
+    // let global_version_clone = global_version.clone();
+    tokio::task::spawn(async move {
+        spawn_robot_client_ticker(arc_node_clone, &shared_state_clone)
             .await
             .unwrap()
     });
@@ -98,6 +114,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let model_clone = model.clone();
     tokio::task::spawn(async move {
         auto_transition_runner(&model_clone.name, &model_clone, &shared_state_clone, false)
+            .await
+            .unwrap()
+    });
+
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+    r2r::log_info!(NODE_ID, "Spawning auto operation runner...");
+
+    let shared_state_clone = shared_state.clone();
+    let model_clone = model.clone();
+    tokio::task::spawn(async move {
+        auto_operation_runner(&model_clone.name, &model_clone, &shared_state_clone, false)
             .await
             .unwrap()
     });
@@ -150,7 +177,8 @@ async fn perform_test(
     
     let mut test_nr = 0;
 
-    let mut goals = vec!["var:gantry_position_estimated == d", "var:gantry_position_estimated == b"];
+    // let mut goals = vec!["var:gantry_position_estimated == d", "var:gantry_position_estimated == b"];
+    let mut goals = vec!["var:robot_mounted_estimated == gripper_tool"];
 
     'test_loop: loop {
         let state = shared_state.0.lock().unwrap().clone();
@@ -167,15 +195,19 @@ async fn perform_test(
                 test_nr = test_nr + 1;
                 r2r::log_warn!(NODE_ID, "Starting test {}.", test_nr);
                 let updated_state = state
-                    .update("gantry_emulate_execution_time", 2.to_spvalue())
-                    .update("gantry_emulated_execution_time", 3000.to_spvalue())
-                    .update("gantry_emulate_failure_rate", 2.to_spvalue())
-                    .update("gantry_emulated_failure_rate", 30.to_spvalue())
-                    .update("gantry_emulate_failure_cause", 2.to_spvalue())
-                    .update(
-                        "gantry_emulated_failure_cause",
-                        vec!["violation", "collision", "detected_drift"].to_spvalue(),
-                    )
+                    // .update("gantry_emulate_execution_time", 2.to_spvalue())
+                    // .update("gantry_emulated_execution_time", 3000.to_spvalue())
+                    // .update("gantry_emulate_failure_rate", 2.to_spvalue())
+                    // .update("gantry_emulated_failure_rate", 30.to_spvalue())
+                    // .update("gantry_emulate_failure_cause", 2.to_spvalue())
+                    // .update(
+                    //     "gantry_emulated_failure_cause",
+                    //     vec!["violation", "collision", "detected_drift"].to_spvalue(),
+                    // )
+                    // .update(
+                    //     "robot_emulated_failure_cause",
+                    //     vec!["move_outside_work_area", "collision_with_operator"].to_spvalue(),
+                    // )
                     .update("minimal_model_goal", goals.remove(0).to_spvalue())
                     .update("minimal_model_replan_trigger", true.to_spvalue())
                     .update("minimal_model_replanned", false.to_spvalue());

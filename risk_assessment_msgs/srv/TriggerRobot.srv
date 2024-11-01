@@ -1,5 +1,5 @@
 # Request
-string command # move, pick, place
+string command # move, pick, place, mount, unmount, check_mounted_tool
 float32 speed
 string position
 
@@ -10,3 +10,4 @@ risk_assessment_msgs/Emulation emulated_response
 bool success
 string failure_cause
 string info
+string checked_mounted_tool

@@ -4,6 +4,7 @@ use micro_sp::*;
 pub fn minimal_model(name: &str, state: &State) -> (Model, State) {
     let state = state.clone();
     let mut operations = vec![];
+    let mut auto_operations = vec!();
     let mut auto_transitions = vec![];
 
     operations.push(Operation::new(
@@ -284,7 +285,7 @@ pub fn minimal_model(name: &str, state: &State) -> (Model, State) {
         &state
     ));
 
-    let model = Model::new(name, auto_transitions, operations);
+    let model = Model::new(name, auto_transitions, auto_operations, operations);
 
     (model, state)
 }
