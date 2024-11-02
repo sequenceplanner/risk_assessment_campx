@@ -119,9 +119,9 @@ pub async fn robot_client_ticker(
                 state.get_or_default_string(target, "robot_position_command");
             let mut robot_position_estimated =
                 state.get_or_default_string(target, "robot_position_estimated");
-            let mut robot_calibrated_estimated =
-                state.get_or_default_bool(target, "robot_calibrated_estimated");
-            let mut robot_locked_estimated = state.get_bool(target, "robot_locked_estimated");
+            // let mut robot_calibrated_estimated =
+            //     state.get_or_default_bool(target, "robot_calibrated_estimated");
+            // let mut robot_locked_estimated = state.get_bool(target, "robot_locked_estimated");
             let mut robot_mounted_one_time_measured = state.get_or_default_string(target, "robot_mounted_one_time_measured");
             let emulate_execution_time =
                 state.get_or_default_i64(target, "robot_emulate_execution_time");
@@ -313,14 +313,14 @@ pub async fn robot_client_ticker(
                     "robot_position_estimated",
                     robot_position_estimated.to_spvalue(),
                 )
-                .update(
-                    "robot_calibrated_estimated",
-                    robot_calibrated_estimated.to_spvalue(),
-                )
-                .update(
-                    "robot_locked_estimated",
-                    robot_locked_estimated.to_spvalue(),
-                )
+                // .update(
+                //     "robot_calibrated_estimated",
+                //     robot_calibrated_estimated.to_spvalue(),
+                // )
+                // .update(
+                //     "robot_locked_estimated",
+                //     robot_locked_estimated.to_spvalue(),
+                // )
                 .update(
                     "robot_mounted_one_time_measured",
                     robot_mounted_one_time_measured.to_spvalue(),

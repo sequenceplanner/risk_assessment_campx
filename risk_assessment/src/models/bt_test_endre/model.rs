@@ -303,7 +303,7 @@ pub fn bt_test_endre(name: &str, state: &State) -> (Model, State) {
             None,
             Some(3),
             Transition::parse(
-                &format!("start_op_gantry_move_to_{}", pos),
+                &format!("start_op_robot_move_to_{}", pos),
                 "var:robot_request_state == initial \
                     && var:robot_request_trigger == false \
                     && var:gantry_locked_estimated == true \

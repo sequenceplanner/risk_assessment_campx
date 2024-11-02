@@ -14,7 +14,7 @@ pub use crate::interfaces::gantry_client_ticker::*;
 pub use crate::interfaces::robot_client_ticker::*;
 
 pub mod models;
-pub use crate::models::minimal::*;
+// pub use crate::models::*;
 
 pub mod utils;
 pub use crate::utils::state_publisher::*;
