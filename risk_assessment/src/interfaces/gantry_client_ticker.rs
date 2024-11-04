@@ -1,12 +1,10 @@
 use crate::*;
-use futures::Future;
 use micro_sp::*;
 use r2r::{
     risk_assessment_msgs::{msg::Emulation, srv::TriggerGantry},
-    Error, QosProfile,
+    QosProfile,
 };
 use std::sync::{
-    atomic::{AtomicUsize, Ordering},
     Arc, Mutex,
 };
 use tokio::sync::{mpsc, oneshot};
@@ -37,13 +35,10 @@ pub async fn gantry_client_ticker(
     r2r::log_info!("gantry_interface", "Spawned.");
 
     loop {
-        // current try:
-        // read the whole state, take the operation to produce a new state
-        // then take the diff from the new state compared to the old state and send a request to change only those values
 
         let (response_tx, response_rx) = oneshot::channel();
-        command_sender.send(Command::GetState(response_tx)).await?; // TODO: maybe we can just ask for values from the guard
-        let state = response_rx.await?;
+        command_sender.send(Command::GetState(response_tx)).await?;
+        let state        = response_rx.await?;
 
         let mut request_trigger = state.get_or_default_bool(target, "gantry_request_trigger");
         let mut request_state = state.get_or_default_string(target, "gantry_request_state");

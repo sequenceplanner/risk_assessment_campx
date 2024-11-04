@@ -22,19 +22,19 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let node = r2r::Node::create(ctx, NODE_ID, "")?;
     let arc_node = Arc::new(Mutex::new(node));
 
-    let state = models::minimal::state::state();
+    let state = models::bt_test_endre::state::state();
 
     // Add the variables that keep track of the runner state
-    let runner_vars = generate_runner_state_variables("minimal_model");
+    let runner_vars = generate_runner_state_variables("bt_test_endre");
     let state = state.extend(runner_vars, true);
 
-    let (model, state) = models::minimal::model::minimal_model("minimal_model", &state);
+    let (model, state) = models::bt_test_endre::model::bt_test_endre("bt_test_endre", &state);
     let name = model.clone().name;
 
     let op_vars = generate_operation_state_variables(&model, false);
     let state = state.extend(op_vars, true);
 
-    let (tx, rx) = mpsc::channel(100); // Experiment with buffer size
+    let (tx, rx) = mpsc::channel(32); // Experiment with buffer size
     tokio::spawn(state_manager(rx, state));
 
     r2r::log_info!(NODE_ID, "Spawning emulators...");
@@ -42,10 +42,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let arc_node_clone: Arc<Mutex<r2r::Node>> = arc_node.clone();
     tokio::task::spawn(async move { spawn_gantry_emulator_server(arc_node_clone).await.unwrap() });
 
-    // // tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
-    // // let arc_node_clone: Arc<Mutex<r2r::Node>> = arc_node.clone();
-    // // tokio::task::spawn(async move { spawn_robot_emulator_server(arc_node_clone).await.unwrap() });
+    let arc_node_clone: Arc<Mutex<r2r::Node>> = arc_node.clone();
+    tokio::task::spawn(async move { spawn_robot_emulator_server(arc_node_clone).await.unwrap() });
 
     tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
@@ -59,7 +59,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .unwrap()
     });
 
-    // tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
+    let arc_node_clone: Arc<Mutex<r2r::Node>> = arc_node.clone();
+    let tx_clone = tx.clone();
+    tokio::task::spawn(async move {
+        robot_client_ticker(arc_node_clone, tx_clone)
+            .await
+            .unwrap()
+    });
 
     // let arc_node_clone: Arc<Mutex<r2r::Node>> = arc_node.clone();
     // let shared_state_clone = shared_state.clone();
@@ -159,7 +167,8 @@ async fn perform_test(
     r2r::log_warn!(NODE_ID, "Tests started.");
     let mut interval = interval(Duration::from_millis(TEST_TICKER_RATE));
     let mut test_nr = 0;
-    let mut goals = vec!["var:gantry_position_estimated == b"];
+    let mut goals = vec!["var:robot_mounted_estimated == gripper_tool"];
+    // let mut goals = vec!("var:robot_mounted_checked == true");
 
     'test_loop: loop {
         let (response_tx, response_rx) = oneshot::channel();
@@ -168,6 +177,15 @@ async fn perform_test(
 
         let plan_state = state
             .get_or_default_string(&format!("{}_tester", name), &format!("{}_plan_state", name));
+
+        let robot_mounted_estimated = state
+            .get_or_default_string(&format!("{}_tester", name), &format!("robot_mounted_estimated"));
+
+        let robot_mounted_one_time_measured = state
+        .get_or_default_string(&format!("{}_tester", name), &format!("robot_mounted_one_time_measured"));
+
+        r2r::log_error!(NODE_ID, "robot_mounted_estimated: {}.", robot_mounted_estimated);
+        r2r::log_error!(NODE_ID, "robot_mounted_one_time_measured: {}.", robot_mounted_one_time_measured);
 
         if goals.len() != 0 {
             // println!("{:?}", goals);
@@ -192,9 +210,9 @@ async fn perform_test(
                     //     "robot_emulated_failure_cause",
                     //     vec!["move_outside_work_area", "collision_with_operator"].to_spvalue(),
                     // )
-                    .update("minimal_model_goal", goals.remove(0).to_spvalue())
-                    .update("minimal_model_replan_trigger", true.to_spvalue())
-                    .update("minimal_model_replanned", false.to_spvalue());
+                    .update("bt_test_endre_goal", goals.remove(0).to_spvalue())
+                    .update("bt_test_endre_replan_trigger", true.to_spvalue())
+                    .update("bt_test_endre_replanned", false.to_spvalue());
 
                     let modified_state = state.get_diff_partial_state(&new_state);
                     command_sender
