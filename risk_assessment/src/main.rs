@@ -1,7 +1,4 @@
-use std::collections::HashMap;
-// use rand::seq::SliceRandom;
 use std::error::Error;
-use std::sync::atomic::AtomicUsize;
 use std::sync::{Arc, Mutex};
 use tokio::sync::{mpsc, oneshot};
 use tokio::time::{interval, Duration};
@@ -31,7 +28,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let (model, state) = models::bt_test_endre::model::bt_test_endre("bt_test_endre", &state);
     let name = model.clone().name;
 
-    let op_vars = generate_operation_state_variables(&model, false);
+    let op_vars = generate_operation_state_variables(&model, coverability_tracking);
     let state = state.extend(op_vars, true);
 
     let (tx, rx) = mpsc::channel(32); // Experiment with buffer size

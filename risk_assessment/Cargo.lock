@@ -174,9 +174,9 @@ checksum = "9ac0150caa2ae65ca5bd83f25c7de183dea78d4d366469f148435e2acfbad0da"
 
 [[package]]
 name = "cc"
-version = "1.1.35"
+version = "1.1.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f57c4b4da2a9d619dd035f27316d7a426305b75be93d09e92f2b9229c34feaf"
+checksum = "baee610e9452a8f6f0a1b6194ec09ff9e2d85dea54432acdae41aa0761c95d70"
 dependencies = [
  "shlex",
 ]
@@ -609,7 +609,7 @@ checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 [[package]]
 name = "micro_sp"
 version = "0.1.0"
-source = "git+https://github.com/endre90/micro_sp?branch=master#1b5308d41adf501bf1e751e5e21522974739e0d9"
+source = "git+https://github.com/endre90/micro_sp?branch=master#05a8367c4ec8d47dbd5cdaae012f8249c91ef3f8"
 dependencies = [
  "env_logger",
  "log",

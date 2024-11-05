@@ -46,8 +46,8 @@ pub async fn robot_client_ticker(
         let robot_position_command = state.get_or_default_string(target, "robot_position_command");
         let mut robot_position_estimated =
             state.get_or_default_string(target, "robot_position_estimated");
-        let mut robot_mounted_estimated =
-            state.get_or_default_string(target, "robot_mounted_estimated");
+        // let mut robot_mounted_estimated =
+        //     state.get_or_default_string(target, "robot_mounted_estimated");
         // let mut robot_locked_estimated = state.get_bool(target, "robot_locked_estimated");
         let mut robot_mounted_one_time_measured =
             state.get_or_default_string(target, "robot_mounted_one_time_measured");

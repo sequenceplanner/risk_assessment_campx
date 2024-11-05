@@ -1,5 +1,4 @@
 use micro_sp::*;
-use pred_parser::action;
 // use crate::*;
 
 // Operations that we need:
@@ -8,17 +7,20 @@ use pred_parser::action;
 // Camera System: update blue boxes
 // Robot: move, mount, unmount, pick, place
 
+
+
 pub fn bt_test_endre(name: &str, state: &State) -> (Model, State) {
     let state = state.clone();
-    let mut auto_transitions = vec![];
-    let mut auto_operations = vec![];
+    let auto_transitions = vec![];
+    let auto_operations = vec![];
     let mut operations = vec![];
 
     operations.push(Operation::new(
         "op_gantry_lock",
         None,
         Some(3),
-        Vec::from([Transition::parse(
+        Vec::from([
+            Transition::parse(
             "start_op_gantry_lock",
             "var:gantry_request_state == initial \
                 && var:gantry_request_trigger == false",
@@ -55,7 +57,7 @@ pub fn bt_test_endre(name: &str, state: &State) -> (Model, State) {
             &state,
         )]),
         Vec::from([]),
-        Vec::from([]),
+        Vec::from([])
     ));
 
     operations.push(Operation::new(
@@ -99,7 +101,7 @@ pub fn bt_test_endre(name: &str, state: &State) -> (Model, State) {
             &state,
         )]),
         Vec::from([]),
-        Vec::from([]),
+        Vec::from([])
     ));
 
     operations.push(Operation::new(
@@ -144,7 +146,7 @@ pub fn bt_test_endre(name: &str, state: &State) -> (Model, State) {
             &state,
         )]),
         Vec::from([]),
-        Vec::from([]),
+        Vec::from([])
     ));
 
     for pos in vec!["a", "b", "c", "d", "pipe_blue_box", "plate_pipe_box"] {
@@ -193,7 +195,7 @@ pub fn bt_test_endre(name: &str, state: &State) -> (Model, State) {
                 &state,
             )]),
             Vec::from([]),
-            Vec::from([]),
+            Vec::from([])
         ));
     }
 
@@ -293,8 +295,8 @@ pub fn bt_test_endre(name: &str, state: &State) -> (Model, State) {
     //     ));
     // }
 
-    //     && var:gantry_locked_estimated == true \
-    // && var:gantry_calibrated_estimated == true",
+                    //     && var:gantry_locked_estimated == true \
+                    // && var:gantry_calibrated_estimated == true",
 
     for pos in vec![
         "a",
@@ -351,11 +353,11 @@ pub fn bt_test_endre(name: &str, state: &State) -> (Model, State) {
                 &state,
             )]),
             Vec::from([]),
-            Vec::from([]),
+            Vec::from([])
         ));
     }
 
-    for tool in vec!["gripper_tool", "suction_tool", "none"] {
+    for tool in vec!["gripper_tool", "suction_tool", "none", "unknown"] {
         operations.push(Operation::new(
             &format!("op_robot_check_for_{tool}_mounted"),
             None,
@@ -390,34 +392,15 @@ pub fn bt_test_endre(name: &str, state: &State) -> (Model, State) {
                     Vec::<&str>::new(),
                     &state,
                 ),
-                // Transition::new(
-                //     &format!("complete_op_robot_check_for_{tool}_mounted_2"), 
-                //     Predicate::TRUE,
-                //     pred_parser::pred(&format!("var:robot_request_state == succeeded \
-                //         && var:robot_mounted_one_time_measured != {tool} \
-                //         && var:robot_mounted_one_time_measured != UNKNOWN"), &state).unwrap(),
-                //     vec!(
-                //         pred_parser::action("var:robot_request_trigger <- false", &state).unwrap(),
-                //         pred_parser::action("var:robot_request_state <- initial", &state).unwrap(),
-                //         pred_parser::action("var:robot_mounted_checked <- true", &state).unwrap(),
-                //         pred_parser::action(&format!("var:{name}_replan_trigger <- true"), &state).unwrap(),
-                //         pred_parser::action(&format!("var:{name}_replanned <- false"), &state).unwrap(),
-                //         Action::new(v!("robot_mounted_estimated"), v!("robot_mounted_one_time_measured").wrap())
-                //     ),
-                //     Vec::new(),
-                // )
                 Transition::parse(
                     &format!("complete_op_robot_check_for_{tool}_mounted_2"),
                     "true",
-                    &format!("var:robot_request_state == succeeded \
-                        && var:robot_mounted_one_time_measured != {tool} \
-                        && var:robot_mounted_one_time_measured != UNKNOWN"),
+                    &format!("var:robot_request_state == succeeded && var:robot_mounted_one_time_measured != {tool}"),
                     vec![
                         "var:robot_request_trigger <- false",
                         "var:robot_request_state <- initial",
                         "var:robot_mounted_checked <- true",
-                        // SPAssignment
-                        &format!("var:robot_mounted_estimated <- var:robot_mounted_one_time_measured"), // replace gripper_tool with var:robot_mounted_one_time_measured
+                        &format!("var:robot_mounted_estimated <- var:robot_mounted_one_time_measured"),
                         &format!("var:{name}_replan_trigger <- true"),
                         &format!("var:{name}_replanned <- false"),
                     ],
@@ -454,8 +437,7 @@ pub fn bt_test_endre(name: &str, state: &State) -> (Model, State) {
                     && var:robot_request_trigger == false \
                     && var:robot_position_estimated == {tool}_rack \
                     && var:robot_mounted_estimated == none \
-                    && var:gantry_locked_estimated == true \
-                    && var:robot_mounted_checked == true",
+                    && var:gantry_locked_estimated == true",
                 ),
                 "true",
                 vec![
@@ -490,7 +472,7 @@ pub fn bt_test_endre(name: &str, state: &State) -> (Model, State) {
                 &state,
             )]),
             Vec::from([]),
-            Vec::from([]),
+            Vec::from([])
         ));
     }
 
@@ -541,7 +523,7 @@ pub fn bt_test_endre(name: &str, state: &State) -> (Model, State) {
                 &state,
             )]),
             Vec::from([]),
-            Vec::from([]),
+            Vec::from([])
         ));
     }
 
@@ -591,6 +573,7 @@ pub fn bt_test_endre(name: &str, state: &State) -> (Model, State) {
     //     Transition::empty(),
     // ));
 
+
     // // reason enough to have automatic operations?
     // auto_transitions.push(Vec::from([Transition::parse(
     //     "start_robot_check_mounted_tool",
@@ -629,15 +612,15 @@ pub fn bt_test_endre(name: &str, state: &State) -> (Model, State) {
 
 #[test]
 fn test_model() {
+
     let state = crate::models::bt_test_endre::state::state();
 
     // Add the variables that keep track of the runner state
     let runner_vars = generate_runner_state_variables("bt_test_endre");
     let state = state.extend(runner_vars, true);
 
-    let (model, state) =
-        crate::models::bt_test_endre::model::bt_test_endre("bt_test_endre", &state);
-    let name = model.clone().name;
+    let (model, state) = crate::models::bt_test_endre::model::bt_test_endre("bt_test_endre", &state);
+    // let name = model.clone().name;
 
     let op_vars = generate_operation_state_variables(&model, false);
     let state = state.extend(op_vars, true);

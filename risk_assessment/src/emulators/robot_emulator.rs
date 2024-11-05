@@ -79,7 +79,6 @@ async fn robot_emlator_server(
                     "mount" => r2r::log_info!("robot_emulator", "Got request to mount."),
                     "unmount" => r2r::log_info!("robot_emulator", "Got request to unmount."),
                     "check_mounted_tool" => {
-                        // removed unknown for now but add back later, "suction_tool", "none"
                         checked_mounted_tool = vec!("gripper_tool", "suction_tool", "none").choose(&mut rand::thread_rng())
                         .unwrap()
                         .to_string();
