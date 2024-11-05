@@ -390,40 +390,40 @@ pub fn bt_test_endre(name: &str, state: &State) -> (Model, State) {
                     Vec::<&str>::new(),
                     &state,
                 ),
-                Transition::new(
-                    &format!("complete_op_robot_check_for_{tool}_mounted_2"), 
-                    Predicate::TRUE,
-                    pred_parser::pred(&format!("var:robot_request_state == succeeded \
-                        && var:robot_mounted_one_time_measured != {tool} \
-                        && var:robot_mounted_one_time_measured != UNKNOWN"), &state).unwrap(),
-                    vec!(
-                        pred_parser::action("var:robot_request_trigger <- false", &state).unwrap(),
-                        pred_parser::action("var:robot_request_state <- initial", &state).unwrap(),
-                        pred_parser::action("var:robot_mounted_checked <- true", &state).unwrap(),
-                        pred_parser::action(&format!("var:{name}_replan_trigger <- true"), &state).unwrap(),
-                        pred_parser::action(&format!("var:{name}_replanned <- false"), &state).unwrap(),
-                        Action::new(v!("robot_mounted_estimated"), v!("robot_mounted_one_time_measured").wrap())
-                    ),
-                    Vec::new(),
-                )
-                // Transition::parse(
-                //     &format!("complete_op_robot_check_for_{tool}_mounted_2"),
-                //     "true",
-                //     &format!("var:robot_request_state == succeeded \
+                // Transition::new(
+                //     &format!("complete_op_robot_check_for_{tool}_mounted_2"), 
+                //     Predicate::TRUE,
+                //     pred_parser::pred(&format!("var:robot_request_state == succeeded \
                 //         && var:robot_mounted_one_time_measured != {tool} \
-                //         && var:robot_mounted_one_time_measured != UNKNOWN"),
-                //     vec![
-                //         "var:robot_request_trigger <- false",
-                //         "var:robot_request_state <- initial",
-                //         "var:robot_mounted_checked <- true",
-                //         // SPAssignment
-                //         &format!("var:robot_mounted_estimated <- gripper_tool"), // replace gripper_tool with var:robot_mounted_one_time_measured
-                //         &format!("var:{name}_replan_trigger <- true"),
-                //         &format!("var:{name}_replanned <- false"),
-                //     ],
-                //     Vec::<&str>::new(),
-                //     &state,
+                //         && var:robot_mounted_one_time_measured != UNKNOWN"), &state).unwrap(),
+                //     vec!(
+                //         pred_parser::action("var:robot_request_trigger <- false", &state).unwrap(),
+                //         pred_parser::action("var:robot_request_state <- initial", &state).unwrap(),
+                //         pred_parser::action("var:robot_mounted_checked <- true", &state).unwrap(),
+                //         pred_parser::action(&format!("var:{name}_replan_trigger <- true"), &state).unwrap(),
+                //         pred_parser::action(&format!("var:{name}_replanned <- false"), &state).unwrap(),
+                //         Action::new(v!("robot_mounted_estimated"), v!("robot_mounted_one_time_measured").wrap())
+                //     ),
+                //     Vec::new(),
                 // )
+                Transition::parse(
+                    &format!("complete_op_robot_check_for_{tool}_mounted_2"),
+                    "true",
+                    &format!("var:robot_request_state == succeeded \
+                        && var:robot_mounted_one_time_measured != {tool} \
+                        && var:robot_mounted_one_time_measured != UNKNOWN"),
+                    vec![
+                        "var:robot_request_trigger <- false",
+                        "var:robot_request_state <- initial",
+                        "var:robot_mounted_checked <- true",
+                        // SPAssignment
+                        &format!("var:robot_mounted_estimated <- var:robot_mounted_one_time_measured"), // replace gripper_tool with var:robot_mounted_one_time_measured
+                        &format!("var:{name}_replan_trigger <- true"),
+                        &format!("var:{name}_replanned <- false"),
+                    ],
+                    Vec::<&str>::new(),
+                    &state,
+                )
             ]),
             Vec::from([Transition::parse(
                 &format!("fail_op_robot_check_mounted"),
