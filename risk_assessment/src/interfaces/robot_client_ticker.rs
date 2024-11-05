@@ -46,8 +46,8 @@ pub async fn robot_client_ticker(
         let robot_position_command = state.get_or_default_string(target, "robot_position_command");
         let mut robot_position_estimated =
             state.get_or_default_string(target, "robot_position_estimated");
-        // let mut robot_calibrated_estimated =
-        //     state.get_or_default_bool(target, "robot_calibrated_estimated");
+        let mut robot_mounted_estimated =
+            state.get_or_default_string(target, "robot_mounted_estimated");
         // let mut robot_locked_estimated = state.get_bool(target, "robot_locked_estimated");
         let mut robot_mounted_one_time_measured =
             state.get_or_default_string(target, "robot_mounted_one_time_measured");
@@ -60,6 +60,9 @@ pub async fn robot_client_ticker(
         let emulate_failure_cause = state.get_or_default_i64(target, "robot_emulate_failure_cause");
         let emulated_failure_cause =
             state.get_or_default_array_of_strings(target, "robot_emulated_failure_cause");
+
+        // r2r::log_error!(NODE_ID, "robot_mounted_estimated: {}.", robot_mounted_estimated);
+        // r2r::log_error!(NODE_ID, "robot_mounted_one_time_measured: {}.", robot_mounted_one_time_measured);
 
         if request_trigger {
             request_trigger = false;
@@ -173,7 +176,7 @@ pub async fn robot_client_ticker(
                                         "Requested check_mounted_tool failed."
                                     );
                                     request_state = ServiceRequestState::Failed.to_string();
-                                    robot_mounted_one_time_measured = "unknown".to_string();
+                                    robot_mounted_one_time_measured = "UNKNOWN".to_string();
                                     subsequent_fail_counter = subsequent_fail_counter + 1;
                                     total_fail_counter = total_fail_counter + 1;
                                 }

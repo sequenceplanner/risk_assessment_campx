@@ -167,7 +167,7 @@ async fn perform_test(
     r2r::log_warn!(NODE_ID, "Tests started.");
     let mut interval = interval(Duration::from_millis(TEST_TICKER_RATE));
     let mut test_nr = 0;
-    let mut goals = vec!["var:robot_mounted_estimated == gripper_tool"];
+    let mut goals = vec!["var:robot_mounted_estimated == suction_tool"];
     // let mut goals = vec!("var:robot_mounted_checked == true");
 
     'test_loop: loop {
@@ -177,15 +177,6 @@ async fn perform_test(
 
         let plan_state = state
             .get_or_default_string(&format!("{}_tester", name), &format!("{}_plan_state", name));
-
-        let robot_mounted_estimated = state
-            .get_or_default_string(&format!("{}_tester", name), &format!("robot_mounted_estimated"));
-
-        let robot_mounted_one_time_measured = state
-        .get_or_default_string(&format!("{}_tester", name), &format!("robot_mounted_one_time_measured"));
-
-        r2r::log_error!(NODE_ID, "robot_mounted_estimated: {}.", robot_mounted_estimated);
-        r2r::log_error!(NODE_ID, "robot_mounted_one_time_measured: {}.", robot_mounted_one_time_measured);
 
         if goals.len() != 0 {
             // println!("{:?}", goals);
@@ -210,6 +201,7 @@ async fn perform_test(
                     //     "robot_emulated_failure_cause",
                     //     vec!["move_outside_work_area", "collision_with_operator"].to_spvalue(),
                     // )
+                    // .update("robot_mounted_estimated", "unknown".to_spvalue())
                     .update("bt_test_endre_goal", goals.remove(0).to_spvalue())
                     .update("bt_test_endre_replan_trigger", true.to_spvalue())
                     .update("bt_test_endre_replanned", false.to_spvalue());

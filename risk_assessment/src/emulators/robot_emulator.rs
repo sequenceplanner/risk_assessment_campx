@@ -65,7 +65,7 @@ async fn robot_emlator_server(
                     _ => "generic_failure".to_string(),
                 };
 
-                let mut checked_mounted_tool = "unknown".to_string();
+                let mut checked_mounted_tool = "UNKNOWN".to_string();
                 match request.message.command.as_str() {
                     "move" => r2r::log_info!(
                         "robot_emulator",
@@ -79,7 +79,8 @@ async fn robot_emlator_server(
                     "mount" => r2r::log_info!("robot_emulator", "Got request to mount."),
                     "unmount" => r2r::log_info!("robot_emulator", "Got request to unmount."),
                     "check_mounted_tool" => {
-                        checked_mounted_tool = vec!("gripper_tool", "suction_tool", "none", "unknown").choose(&mut rand::thread_rng())
+                        // removed unknown for now but add back later, "suction_tool", "none"
+                        checked_mounted_tool = vec!("gripper_tool", "suction_tool", "none").choose(&mut rand::thread_rng())
                         .unwrap()
                         .to_string();
                         r2r::log_info!("robot_emulator", "Got request to check_mounted_tool.")
