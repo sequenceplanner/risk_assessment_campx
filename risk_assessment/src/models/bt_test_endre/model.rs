@@ -7,8 +7,6 @@ use micro_sp::*;
 // Camera System: update blue boxes
 // Robot: move, mount, unmount, pick, place
 
-
-
 pub fn bt_test_endre(name: &str, state: &State) -> (Model, State) {
     let state = state.clone();
     let auto_transitions = vec![];
@@ -149,7 +147,7 @@ pub fn bt_test_endre(name: &str, state: &State) -> (Model, State) {
         Vec::from([])
     ));
 
-    for pos in vec!["a", "b", "c", "d", "pipe_blue_box", "plate_pipe_box"] {
+    for pos in vec!["home", "pipe_blue_box", "plate_pipe_box"] {
         operations.push(Operation::new(
             &format!("op_gantry_move_to_{}", pos),
             None,
@@ -604,6 +602,10 @@ pub fn bt_test_endre(name: &str, state: &State) -> (Model, State) {
     //     ),
     //     &state
     // ));
+
+
+    // TODO: An automatic transition or operation that automatically updates 
+    // the positions of boxes every minute or so or when updated_boxes is false
 
     let model = Model::new(name, auto_transitions, auto_operations, operations);
 
